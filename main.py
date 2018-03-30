@@ -14,7 +14,7 @@ import matplotlib.colors as colors
 import matplotlib.cm as cmx
 import sympy
 
-@profile
+#@profile
 def toy():
     file = 'example/toy.pm'
     time1 = time.time()
@@ -45,7 +45,7 @@ def toy():
     ax.set_ylabel('q')
     ax.set_zlabel('probability')
     cb=plt.colorbar(plot)
-    cb.set_label("IC width")
+    cb.set_label("CI width")
     plt.savefig('toy_%d.png'%num_of_run)
 
 def toym():
@@ -120,7 +120,7 @@ def nand2():
     ax.set_ylabel(str(pmc.param[1]))
     ax.set_zlabel('probability')
     cb=plt.colorbar(plot)
-    cb.set_label("IC width")
+    cb.set_label("CI width")
     plt.savefig('nand2_%d.png'%num_of_run)
 
 def zeroconf():
@@ -149,9 +149,9 @@ def zeroconf():
     plot=ax.scatter(X,Y,Z,c=C.ravel())
     ax.set_xlabel(str(pmc.param[0]))
     ax.set_ylabel(str(pmc.param[1]))
-    ax.set_zlabel('Espected value')
+    ax.set_zlabel('Expected value')
     cb=plt.colorbar(plot)
-    cb.set_label("IC width")
+    cb.set_label("CI width")
     plt.savefig('zeroconf_%d.png'%num_of_run)
     plt.show()
 
@@ -167,7 +167,7 @@ def crowd():
     estimated_reward, estimated_variance = simu(length_of_run, num_of_run, pmc)#,{pmc.param[0]:0.8,pmc.param[1]:1/6})
     time2 = time.time()
     print('the %d simulations took %0.3f ms' % (num_of_run, (time2-time1)*1000.0))
-    print('the estimated proobability for %s=0.8 and %s=1/6 is %0.3f with IC length %0.3f'%(str(pmc.param[0]),str(pmc.param[1]),estimated_reward.subs({pmc.param[0]:0.8,pmc.param[1]:1/6}),2*1.96*estimated_variance.subs({pmc.param[0]:0.8,pmc.param[1]:1/6})/sqrt(num_of_run)))
+    print('the estimated probability for %s=0.8 and %s=1/6 is %0.3f with CI length %0.3f'%(str(pmc.param[0]),str(pmc.param[1]),estimated_reward.subs({pmc.param[0]:0.8,pmc.param[1]:1/6}),2*1.96*estimated_variance.subs({pmc.param[0]:0.8,pmc.param[1]:1/6})/sqrt(num_of_run)))
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     f=sympy.lambdify(pmc.param,estimated_reward)
@@ -184,7 +184,7 @@ def crowd():
     ax.set_ylabel(str(pmc.param[1]))
     ax.set_zlabel('probability')
     cb=plt.colorbar(plot)
-    cb.set_label("IC width")
+    cb.set_label("CI width")
     plt.savefig('crowds_%d.png'%num_of_run)
 
 def main():

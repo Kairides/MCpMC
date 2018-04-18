@@ -7,13 +7,13 @@ def copy_dict(dic):
 def exp_to_fun(exp):
     try:
         free_var = exp.free_symbols
-        b=True
+        b = True
     except:
-        b=False
+        b = False
     if b:
-        f=sympy.lambdify(free_var,exp,modules={'And':all, 'Or':any})
+        f = sympy.lambdify(free_var, exp, modules={'And':all, 'Or':any})
         def g(dic):
-            eval=list(map(lambda x: dic[x],free_var))
+            eval=list(map(lambda x: dic[x], free_var))
             return (f(*eval))
         return g
     else:

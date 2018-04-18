@@ -6,7 +6,7 @@ from modules import PmcModules, Module
 #from memory_profiler import profile
 
 
-# used to define multiple parameters in one go of the form param int p{0..N}; utilisé apres p{x}
+# used to define multiple parameters in one go of the form param int p{0..N}; utilise apres p{x}
 paramnameglob=""
 class my_func(Function):
     @classmethod
@@ -175,7 +175,7 @@ def myparse(filepath):
     t_MINUS=r'-'
     t_DIV=r'/'
     t_MULT=r'\*'
-    t_NAME=r'[a-zA-Z_][a-zA-Z_0-9]*'
+    t_NAME=r'[a-zA-Z_][a-zA-Z_0-9]*' # TODO : Verifier la premiere partie de la regex
     t_EQUAL=r'='
     t_DDOT=r':'
     t_LCROCHET=r'\['
@@ -390,18 +390,18 @@ def myparse(filepath):
         '''stateDecl : NAME DDOT LCROCHET funexp POINTPOINT funexp RCROCHET
             | NAME DDOT LCROCHET funexp POINTPOINT funexp RCROCHET INIT funexp
             | NAME DDOT BOOL'''
-        dic[p[1]] = rea(p[1],dic)
+        dic[p[1]] = rea(p[1], dic)
         if len(p) > 8:
             _, e1 = p[4]
             _, e2 = p[5]
             _, e3 = p[9]
-            curentMod.add_state(dic[p[1]], rea(e1,dic), rea(e2,dic), rea(e3,dic))
+            curentMod.add_state(dic[p[1]], rea(e1, dic), rea(e2, dic), rea(e3, dic))
             type[p[1]] = "int"
         elif len(p) > 5:
             type[p[1]] = "int"
             _, e1 = p[4]
             _, e2 = p[6]
-            curentMod.add_state(dic[p[1]], rea(e1,dic), rea(e2,dic))
+            curentMod.add_state(dic[p[1]], rea(e1, dic), rea(e2, dic))
         else:
             type[p[1]] = "bool"
             curentMod.add_state(dic[p[1]], True, False)
@@ -419,13 +419,13 @@ def myparse(filepath):
         if len(p) == 6:
             t,e = p[3]
             if t=="bool":
-                curentMod.add_transition("", rea(e,dic), p[5])
+                curentMod.add_transition("", rea(e, dic), p[5])
             else:
                 raise Exception('Not bool in cond'+e)
         else:
             t,e = p[4]
             if t == "bool":
-                curentMod.add_transition(p[2], rea(e,dic), p[6])
+                curentMod.add_transition(p[2], rea(e, dic), p[6])
             else:
                 raise Exception('Not bool in cond'+e)
 
@@ -492,7 +492,7 @@ def myparse(filepath):
                 t, e = p[4]
                 _, er = p[6]
                 if t == 'bool':
-                    pmc.add_reward(p[2], rea(e,dic), rea(er,dic))
+                    pmc.add_reward(p[2], rea(e, dic), rea(er, dic))
                 else:
                     raise Exception("Invalid type in condition of reward "+p[2])
             else:
@@ -557,7 +557,7 @@ def myparse(filepath):
         if (t1 == t2 and (t1 == "bool" or t1=="default")) or ("default" in (t1, t2) and "bool" in (t1, t2)):
             p[0]=["bool", "(%s&%s)"%(e1, e2)]
         elif t1 == t2 or t1 == "default" or t2 == "default":
-            p[0]=["bool", "((%s >= 0)&(%s <= 0))"%(e1+"-"+e2,e1+"-"+e2)]
+            p[0]=["bool", "((%s >= 0)&(%s <= 0))"%(e1+"-"+e2, e1+"-"+e2)]
         else:
             raise Exception("Incompatible type in : "+e1+p[2]+e2)
 
@@ -577,7 +577,7 @@ def myparse(filepath):
             | MINUS funexp'''
         if len(p) > 3:
             t,e = p[2]
-            p[0] = [t,"(%s)"%e]
+            p[0] = [t, "(%s)"%e]
         elif p[1] == '!':
             t, e = p[2]
             if t == "bool" or t == "default":
@@ -608,7 +608,7 @@ def myparse(filepath):
     def p_funexpParam(p):
         'funexp : NAME LACCO funexp RACCO'
         _,e = p[3]
-        p[0] = ["int", "%s(%s)"%(p[1],e)]
+        p[0] = ["int", "%s(%s)"%(p[1], e)]
 
 
 

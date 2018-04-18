@@ -18,40 +18,31 @@ import sympy
 # @profile
 def toy():
 
-    # Selection du fichier toy.pm dans le dossier example
-    file = 'example/toy.pm'
+    file = 'example/toy.pm'  # Selection du fichier toy.pm dans le dossier example
 
-    # Recuperation de time1
-    time1 = time.time()
+    time1 = time.time()  # Recuperation de time1
 
     pmc = myparse(file)
 
-    # Reuperation de time2
-    time2 = time.time()
+    time2 = time.time()  # Reuperation de time2
 
     print('parsing of %s took %0.3f ms' % (file, (time2-time1)*1000.0))
 
-    # Nombre de tours
-    num_of_run = 10000
+    num_of_run = 10000  # Nombre de tours
 
-    # Longueur des tours
-    length_of_run = 100
+    length_of_run = 100  # Longueur des tours
 
-    # Recuperation de time1
-    time1 = time.time()
+    time1 = time.time()  # Recuperation de time1
 
     estimated_reward, estimated_variance = simu(length_of_run, num_of_run, pmc)
 
-    # Recuperation de time2
-    time2 = time.time()
+    time2 = time.time()  # Recuperation de time2
 
     print('the %d simulations took %0.3f ms' % (num_of_run, (time2-time1)*1000.0))
 
-    # Plot de la figure
-    fig = plt.figure()
+    fig = plt.figure()  # Plot de la figure
 
-    # Ajout d'un affichage dans la figure
-    ax = fig.add_subplot(111, projection='3d')
+    ax = fig.add_subplot(111, projection='3d')  # Ajout d'un affichage dans la figure
 
     f = sympy.lambdify(pmc.param, estimated_reward)
     fv = np.vectorize(f)
@@ -75,8 +66,7 @@ def toy():
 
 def toym():
 
-    # Selection du fichier toymul.pl dans le dossier example
-    file = 'example/toymul.pm'
+    file = 'example/toymul.pm'  # Selection du fichier toymul.pl dans le dossier example
     time1 = time.time()
     pmc = myparse(file)
     time2 = time.time()
@@ -109,8 +99,7 @@ def toym():
 
 def nand():
 
-    # Selection du fichier nand.pm dans le dossier example
-    file = 'example/nand.pm'
+    file = 'example/nand.pm'  # Selection du fichier nand.pm dans le dossier example
     time1 = time.time()
     pmc = myparse(file)
     time2 = time.time()
@@ -125,8 +114,7 @@ def nand():
 
 def nand2():
 
-    # Selection de nand2.pm dans le dossier example
-    file = 'example/nand2.pm'
+    file = 'example/nand2.pm'  # Selection de nand2.pm dans le dossier example
 
     time1 = time.time()
 
@@ -169,8 +157,7 @@ def nand2():
 
 def zeroconf():
 
-    # Selection du fichier zeroconf.pm dans le dossier example
-    file = 'example/zeroconf.pm'
+    file = 'example/zeroconf.pm'  # Selection du fichier zeroconf.pm dans le dossier example
     time1 = time.time()
     pmc = myparse(file)
     time2 = time.time()
@@ -204,8 +191,7 @@ def zeroconf():
 
 def crowd():
 
-    # Selection du fichier crowd.pm dans le dossier example
-    file = 'example/crowds.pm'
+    file = 'example/crowds.pm'  # Selection du fichier crowd.pm dans le dossier example
     time1 = time.time()
     pmc = myparse(file)
     time2 = time.time()
@@ -239,8 +225,7 @@ def crowd():
 
 def main():
 
-    # Selection du fichier nand.pmdans le dossier example
-    file = 'example/nand.pm'
+    file = 'example/nand.pm'   # Selection du fichier nand.pmdans le dossier example
     if len(argv) > 1:
         file = argv[1]
     pmc = myparse(file)

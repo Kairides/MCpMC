@@ -32,14 +32,14 @@ def sim(length, pmc, valu=None):
                         if typennotexp(outcom[j][0]):
                             threshold -= outcom[j][0]
                         else:
-                            threshold -= 1/norma
+                            threshold -= 1 / norma
                         j += 1
                     j -= 1
                     realprob = outcom[j][0]
                     if typennotexp(realprob):
-                        prob *= mysub(realprob, pmc.get_valuation())/realprob
+                        prob *= mysub(realprob, pmc.get_valuation()) / realprob
                     else:
-                        prob *= mysub(realprob, pmc.get_valuation())*norma
+                        prob *= mysub(realprob, pmc.get_valuation()) * norma
                     pmc.maj(outcom[j][1])
                     cumu_reward += pmc.get_reward(name)
                 else:
@@ -60,7 +60,7 @@ def sim(length, pmc, valu=None):
             # if end:
 # print("end at l = "+str(step))
 # print(cumu_reward)
-    return prob*cumu_reward
+    return prob * cumu_reward
 
 
 def simu(length, num_simu, pmc, valu=None):
@@ -71,8 +71,8 @@ def simu(length, num_simu, pmc, valu=None):
         # print("sim # = "+str(i))
         random_var_y = sim(length, pmc, valu)
         accu_reward += random_var_y
-        accu_var += random_var_y*random_var_y
+        accu_var += random_var_y * random_var_y
 
-    estespy = accu_reward/num_simu
-    estvar = (accu_var/(num_simu-1)-num_simu/(num_simu-1)*estespy**2)**(1/2)
+    estespy = accu_reward / num_simu
+    estvar = (accu_var / (num_simu - 1) - num_simu/(num_simu - 1) * estespy ** 2) ** (1/2)
     return [estespy, estvar]

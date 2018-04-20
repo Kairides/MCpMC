@@ -43,22 +43,24 @@ def myparse(filepath):
         'AND', 'NOT', 'OR',
         'LEQ', 'GEQ', 'GS', 'LS',
 
-         # type of the parsed file
+        # type of the parsed file
         'DTMC', 'CTMC', 'MDP',
 
-         # keywords
-        'MODULE', 'ENDMODULE', 'REWARDS', 'ENDREWARDS', 'INIT', 'ENDINIT', 'PARAM', 'CONST', 'LABEL', 'GLOBALL', 'FORMULA',
+        # keywords
+        'MODULE', 'ENDMODULE', 'REWARDS', 'ENDREWARDS', 'INIT', 'ENDINIT',
+        'PARAM', 'CONST', 'LABEL', 'GLOBALL', 'FORMULA',
 
-         # string for variable names
+        # string for variable names
         'NAME',
 
-         # special char
-        'DDOT', 'LCROCHET', 'RCROCHET', 'POINTPOINT', 'LPAR', 'RPAR', 'FLECHE', 'NEW', 'SC', 'VIRGULE', 'QUOTE', 'LACCO', 'RACCO',
+        # special char
+        'DDOT', 'LCROCHET', 'RCROCHET', 'POINTPOINT', 'LPAR', 'RPAR',
+        'FLECHE', 'NEW', 'SC', 'VIRGULE', 'QUOTE', 'LACCO', 'RACCO',
 
-         # types
+        # types
         'INT', 'TYPEFLOAT', 'BOOL',
 
-         # boolean
+        # boolean
         'TRUE', 'FALSE',
     )
 
@@ -266,11 +268,11 @@ def myparse(filepath):
             print(" WARNING !! only probabilistic model are supported yet")
 
     # list of PARAMETERS separted by a semicolon
-    def p_declParamList(p):
+    def p_decl_param_list(p):
         '''declParamList : declParam SC declParamList
                          | declParam SC'''
 
-    def p_declParaml(p):
+    def p_decl_paraml(p):
         '''declParam : PARAM type NAME DDOT LCROCHET funexp POINTPOINT funexp RCROCHET
                      | PARAM type NAME'''
 
@@ -278,7 +280,7 @@ def myparse(filepath):
         type[p[3]] = "int"
         pmc.add_parameter(dic[p[3]])
     
-    def p_declParamMultiple(p):
+    def p_decl_param_multiple(p):
         'declParam : PARAM type NAME LACCO funexp POINTPOINT funexp RACCO'
 
         global paramnameglob
@@ -302,11 +304,11 @@ def myparse(filepath):
             p[0] = "int"
 
     # list of CONSTANTS separated by a semicolon
-    def p_declConstListl(p):
+    def p_decl_const_listl(p):
         '''declConstList : declConst SC declConstList
                          | declConst SC'''
 
-    def p_declConstl(p):
+    def p_decl_constl(p):
         'declConst : CONST type NAME EQUAL funexp'
 
         t, e = p[5]
@@ -317,7 +319,7 @@ def myparse(filepath):
             raise Exception("invalid type cons decl : " + p[3] + " " + t + " " + p[2])
 
     # list of GLOBAL VARIABLES separated by a semicolon
-    def p_globallList(p):
+    def p_globall_list(p):
         '''declGlobalList : declGlobal SC declGlobalList
                           | declGlobal SC'''
 
@@ -343,7 +345,7 @@ def myparse(filepath):
             pmc.add_global_variable(dic[p[2]], rea("true", dic), rea("false", dic))
 
     # list of MODULES
-    def p_moduleList(p):
+    def p_module_list(p):
         '''moduleList : module moduleList
                       | module'''
 
@@ -354,7 +356,7 @@ def myparse(filepath):
         '''module : modName stateList transList endmodule
                   | reModName  LCROCHET listIdState RCROCHET endmodule'''
 
-    def p_newMod(p):
+    def p_new_mod(p):
         'modName : MODULE NAME'
 
         nonlocal curentMod
@@ -368,7 +370,7 @@ def myparse(filepath):
         curentMod = mod.copy(p[2])
 
     # renaming a module
-    def p_listIdState(p):
+    def p_list_id_state(p):
         '''listIdState : NAME EQUAL NAME
                        | NAME EQUAL NAME VIRGULE listIdState'''
 
@@ -388,7 +390,7 @@ def myparse(filepath):
         curentMod = None
 
     # list of declarition of states
-    def p_stateList(p):
+    def p_state_list(p):
         '''stateList : stateDecl SC stateList
                      | empty'''
 
@@ -415,7 +417,7 @@ def myparse(filepath):
             curentMod.add_state(dic[p[1]], True, False)
 
     # list of transition
-    def p_transList(p):
+    def p_trans_list(p):
         '''transList : trans SC transList
                      | empty'''
 
@@ -437,7 +439,7 @@ def myparse(filepath):
             else:
                 raise Exception('Not bool in cond'+e)
 
-    def p_updatesProb(p):
+    def p_updates_prob(p):
         '''updatesProb : funexp DDOT updates PLUS updatesProb
                         | funexp DDOT updates
                         | updates'''
@@ -471,7 +473,7 @@ def myparse(filepath):
         p[0] = {rea(p[2], dic): rea(e, dic)}
 
     # list of LABELS separated by a semicolon
-    def p_labelList(p):
+    def p_label_list(p):
         '''labelList : label SC labelList
                      | label SC'''
 
@@ -479,7 +481,7 @@ def myparse(filepath):
     def p_label(p):
         'label : LABEL QUOTE NAME QUOTE EQUAL listCond'
 
-    def p_listCond(p):
+    def p_list_cond(p):
         '''listCond : NAME EQUAL funexp AND listCond
                     | NAME EQUAL funexp'''
 
@@ -600,22 +602,22 @@ def myparse(filepath):
             else:
                 raise Exception("incompatible type : -" + e)
 
-    def p_funexpFloat(p):
+    def p_funexp_float(p):
         'funexp : FLOAT'
         p[0] = ["int", p[1]]
 
-    def p_funexpTrueFalse(p):
+    def p_funexp_true_false(p):
         '''funexp : TRUE
                   | FALSE'''
 
         p[0] = ["bool", p[1]]
 
-    def p_funexpVar(p):
+    def p_funexp_var(p):
         'funexp : NAME'
 
         p[0] = [type[p[1]], p[1]]
     
-    def p_funexpParam(p):
+    def p_funexp_param(p):
         'funexp : NAME LACCO funexp RACCO'
 
         _, e = p[3]

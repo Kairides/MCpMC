@@ -38,14 +38,14 @@ def estim_esp_var(length_of_run, num_of_run, pmc, value=None):
 
 def vectorize_f(pcm, estim_reward):
 
-    f = sympy.lambdify(pcm, estim_reward)
+    f = sympy.lambdify(pcm.param, estim_reward)
 
     return np.vectorize(f)
 
 
 def vectorize_v(pmc, estim_variance):
 
-    v = sympy.lambdify(pmc, estim_variance)
+    v = sympy.lambdify(pmc.param, estim_variance)
 
     return np.vectorize(v)
 
@@ -60,7 +60,9 @@ def toy():
     estimated_reward, estimated_variance = estim_esp_var(length_of_run, num_of_run, pmc)
 
     fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
+
+    ax = Axes3D(fig)
+    # ax = fig.add_subplot(111, projection='3d')
 
     fv = vectorize_f(pmc, estimated_reward)
 
@@ -68,13 +70,13 @@ def toy():
 
     x = np.arange(0.05, 0.95, 0.01)
 
-    X1, Y1 = np.meshgrid(x, x)
+    big_x1, big_y1 = np.meshgrid(x, x)
 
-    X = X1[X1+Y1 < 0.95]
-    Y = Y1[X1+Y1 < 0.95]
-    Z = fv(X, Y)
-    C = 2 * 1.96 * vv(X, Y) / sqrt(num_of_run)
-    plot = ax.scatter(X, Y, Z, c=C)
+    big_x = big_x1[big_x1+big_y1 < 0.95]
+    big_y = big_y1[big_x1+big_y1 < 0.95]
+    big_z = fv(big_x, big_y)
+    big_c = 2 * 1.96 * vv(big_x, big_y) / sqrt(num_of_run)
+    plot = ax.scatter(big_x, big_y, big_z, c=big_c)
     ax.set_xlabel('p')
     ax.set_ylabel('q')
     ax.set_zlabel('probability')
@@ -122,7 +124,6 @@ def nand():
     estimated_reward, estimated_variance = estim_esp_var(length_of_run, num_of_run, pmc)
 
 
-
 def nand2():
 
     pmc = parsing_aux('example/nand2.pm')
@@ -133,18 +134,20 @@ def nand2():
     estimated_reward, estimated_variance = estim_esp_var(length_of_run, num_of_run, pmc, {pmc.param[0]: 0.02, pmc.param[1]: 0.9})
 
     fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
+
+    ax = Axes3D(fig)
+    # ax = fig.add_subplot(111, projection='3d')
 
     fv = vectorize_f(pmc, estimated_reward)
 
     vv = vectorize_v(pmc, estimated_variance)
 
     x = np.arange(0.05, 0.95, 0.01)
-    X, Y = np.meshgrid(x, x)
+    big_x, big_y = np.meshgrid(x, x)
 
-    Z = fv(X, Y)
-    C = 2 * 1.96 * vv(X, Y) / sqrt(num_of_run)
-    plot = ax.scatter(X, Y, Z, c=C.ravel())
+    big_z = fv(big_x, big_y)
+    big_c = 2 * 1.96 * vv(big_x, big_y) / sqrt(num_of_run)
+    plot = ax.scatter(big_x, big_y, big_z, c=big_c.ravel())
     ax.set_xlabel(str(pmc.param[0]))
     ax.set_ylabel(str(pmc.param[1]))
     ax.set_zlabel('probability')
@@ -160,20 +163,23 @@ def zeroconf():
     num_of_run = 10000
     length_of_run = 500
 
-    estimated_reward, estimated_variance = estim_esp_var(length_of_run, num_of_run, pmc)  # ,{pmc.param[0]:0.3,pmc.param[1]:0.3})
+    estimated_reward, estimated_variance = estim_esp_var(length_of_run, num_of_run, pmc)
+    # ,{pmc.param[0]:0.3,pmc.param[1]:0.3})
 
     fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
+
+    ax = Axes3D(fig)
+    # ax = fig.add_subplot(111, projection='3d')
 
     fv = vectorize_f(pmc, estimated_reward)
 
     vv = vectorize_v(pmc, estimated_variance)
 
     x = np.arange(0.15, 0.55, 0.005)
-    X, Y = np.meshgrid(x, x)
-    Z = fv(X, Y)
-    C = 2*1.96*vv(X, Y)/sqrt(num_of_run)
-    plot = ax.scatter(X, Y, Z, c=C.ravel())
+    big_x, big_y = np.meshgrid(x, x)
+    big_z = fv(big_x, big_y)
+    big_c = 2*1.96*vv(big_x, big_y)/sqrt(num_of_run)
+    plot = ax.scatter(big_x, big_y, big_z, c=big_c.ravel())
     ax.set_xlabel(str(pmc.param[0]))
     ax.set_ylabel(str(pmc.param[1]))
     ax.set_zlabel('Expected value')
@@ -190,21 +196,31 @@ def crowd():
     num_of_run = 10000
     length_of_run = 1000000
 
-    estimated_reward, estimated_variance = estim_esp_var(length_of_run, num_of_run, pmc)  # ,{pmc.param[0]:0.8,pmc.param[1]:1/6})
+    estimated_reward, estimated_variance = estim_esp_var(length_of_run, num_of_run, pmc)
+    # ,{pmc.param[0]:0.8,pmc.param[1]:1/6})
 
-    print('the estimated probability for %s=0.8 and %s=1/6 is %0.3f with CI length %0.3f' % (str(pmc.param[0]), str(pmc.param[1]), estimated_reward.subs({pmc.param[0]: 0.8, pmc.param[1]: 1/6}), 2*1.96*estimated_variance.subs({pmc.param[0]: 0.8, pmc.param[1]: 1/6})/sqrt(num_of_run)))
+    chain0 = 'the estimated probability for %s=0.8 and %s=1/6 is %0.3f with CI length %0.3f'
+    chain1 = str(pmc.param[0])
+    chain2 = str(pmc.param[1])
+
+    param1 = estimated_reward.subs({pmc.param[0]: 0.8, pmc.param[1]: 1/6})
+    param2 = 2*1.96*estimated_variance.subs({pmc.param[0]: 0.8, pmc.param[1]: 1/6})/sqrt(num_of_run)
+
+    print(chain0 % (chain1, chain2, param1, param2))
     fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
+
+    ax = Axes3D(fig)
+    # ax = fig.add_subplot(111, projection='3d')
     f = sympy.lambdify(pmc.param, estimated_reward)
     fv = np.vectorize(f)
     v = sympy.lambdify(pmc.param, estimated_variance)
     vv = np.vectorize(v)
     x = np.arange(0.05, 0.95, 0.01)
     y = np.arange(0.05, 0.95, 0.01)
-    X, Y = np.meshgrid(x, y)
-    Z = fv(X, Y)
-    C = 2*1.96*vv(X, Y)/sqrt(num_of_run)
-    plot = ax.scatter(X, Y, Z, c=C.ravel())
+    big_x, big_y = np.meshgrid(x, y)
+    big_z = fv(big_x, big_y)
+    big_c = 2*1.96*vv(big_x, big_y)/sqrt(num_of_run)
+    plot = ax.scatter(big_x, big_y, big_z, c=big_c.ravel())
     ax.set_xlabel(str(pmc.param[0]))
     ax.set_ylabel(str(pmc.param[1]))
     ax.set_zlabel('probability')
@@ -223,7 +239,8 @@ def main():
     num_of_run = 10
     length_of_run = 100
 
-    estimated_reward, estimated_variance = simu(length_of_run, num_of_run, pmc)  # ,{pmc.param[0]:0.02,pmc.param[1]:0.9})
+    estimated_reward, estimated_variance = simu(length_of_run, num_of_run, pmc)
+    # ,{pmc.param[0]:0.02,pmc.param[1]:0.9})
     print("\nsimu OK\n")
     print("random valuation:")
     random_valuation = {}
@@ -237,5 +254,17 @@ def main():
     print(3.92/sqrt(num_of_run)*mysub(estimated_variance, random_valuation))
 
 
-toym()
+'''def test():
+    num_tour = 100
 
+    for i in range(1, num_tour):
+        parsing_aux('example/zeroconf.pm')
+        time.sleep(1)
+
+
+test()'''
+
+toym()
+# crowd()
+# zeroconf()
+# toy()

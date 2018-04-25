@@ -58,7 +58,7 @@ def myparse(filepath):
         'FLECHE', 'NEW', 'SC', 'VIRGULE', 'QUOTE', 'LACCO', 'RACCO',
 
         # types
-        'INT', 'TYPEFLOAT', 'BOOL',
+        'INT', 'TYPEFLOAT', 'BOOL', 'INTEGER',
 
         # boolean
         'TRUE', 'FALSE',
@@ -98,6 +98,10 @@ def myparse(filepath):
 
     def t_FLOAT(t):
         r"""(\d+(\.\d+)?)([eE][-+]? \d+)?"""
+        return t
+
+    def t_INTEGER(t):
+        r'\d+'
         return t
 
     def t_MDP(t):
@@ -216,13 +220,20 @@ def myparse(filepath):
 
     # PRECEDENCE of opreators
     precedence = (
+                  ('nonassoc', 'NAME'),
                   ('left', 'OR'),
                   ('left', 'AND'),
-                  ('left', 'EQUAL'),
-                  ('nonassoc', 'GEQ', 'LEQ', 'LS', 'GS'),
+                  ('nonassoc', 'GEQ', 'LEQ', 'LS', 'GS', 'EQUAL'),
                   ('left', 'PLUS', 'MINUS'),
                   ('left', 'MULT', 'DIV'),
-                  ('right', 'NOT'),
+                  ('right', 'NOT', 'UNMINUS'),
+                  ('nonassoc', 'LACCO', 'RACCO', 'LCROCHET', 'RCROCHET'),
+                  ('nonassoc', 'LPAR', 'RPAR'),
+                  ('left', 'DDOT'),
+                  ('left', 'PARAM'),
+                  ('left', 'SC'),
+                  ('left', 'MODULE', 'ENDMODULE'),
+                  ('left', 'REWARDS', 'ENDREWARDS'),
                   )
 
     # STARTING rule
@@ -230,7 +241,7 @@ def myparse(filepath):
 
     # empty for list
     def p_empty(p):
-        'empty :'
+        '''empty :'''
 
     def p_begining(p):
         'def : mdptype unfold'
@@ -248,11 +259,11 @@ def myparse(filepath):
                   | empty'''
 
     def p_formulas(p):
-        '''formulas : formula SC formulas
-                    | empty'''
+        '''formulas : formula SC
+                    | formula SC formulas'''
 
     def p_formula(p):
-        'formula : FORMULA NAME EQUAL funexp'
+        '''formula : FORMULA NAME EQUAL funexp'''
 
         t, e = p[4]
         dic[p[2]] = rea(e, dic)
@@ -263,14 +274,14 @@ def myparse(filepath):
                    | CTMC
                    | DTMC'''
 
-        if p[1] not in ("dtmc", "probabilistic"):
+        if p[1] not in ("dtmc", "probabilistic", "ctmc"):
             print(p[1])
             print(" WARNING !! only probabilistic model are supported yet")
 
     # list of PARAMETERS separted by a semicolon
     def p_decl_param_list(p):
-        '''declParamList : declParam SC declParamList
-                         | declParam SC'''
+        '''declParamList : declParam SC
+                         | declParam SC declParamList'''
 
     def p_decl_paraml(p):
         '''declParam : PARAM type NAME DDOT LCROCHET funexp POINTPOINT funexp RCROCHET
@@ -279,9 +290,9 @@ def myparse(filepath):
         dic[p[3]] = rea(p[3], dic)
         type[p[3]] = "int"
         pmc.add_parameter(dic[p[3]])
-    
+
     def p_decl_param_multiple(p):
-        'declParam : PARAM type NAME LACCO funexp POINTPOINT funexp RACCO'
+        '''declParam : PARAM type NAME LACCO funexp POINTPOINT funexp RACCO'''
 
         global paramnameglob
         paramnameglob = p[3]
@@ -305,11 +316,11 @@ def myparse(filepath):
 
     # list of CONSTANTS separated by a semicolon
     def p_decl_const_listl(p):
-        '''declConstList : declConst SC declConstList
-                         | declConst SC'''
+        '''declConstList : declConst SC
+                         | declConst SC declConstList'''
 
     def p_decl_constl(p):
-        'declConst : CONST type NAME EQUAL funexp'
+        '''declConst : CONST type NAME EQUAL funexp'''
 
         t, e = p[5]
         if t == p[2]:
@@ -320,8 +331,8 @@ def myparse(filepath):
 
     # list of GLOBAL VARIABLES separated by a semicolon
     def p_globall_list(p):
-        '''declGlobalList : declGlobal SC declGlobalList
-                          | declGlobal SC'''
+        '''declGlobalList : declGlobal SC
+                          | declGlobal SC declGlobalList'''
 
     def p_globall(p):
         '''declGlobal : GLOBALL NAME DDOT LCROCHET funexp POINTPOINT funexp RCROCHET
@@ -346,8 +357,8 @@ def myparse(filepath):
 
     # list of MODULES
     def p_module_list(p):
-        '''moduleList : module moduleList
-                      | module'''
+        '''moduleList : module
+                      | module moduleList'''
 
     # For a module either
     # 1 define a new module
@@ -357,13 +368,13 @@ def myparse(filepath):
                   | reModName  LCROCHET listIdState RCROCHET endmodule'''
 
     def p_new_mod(p):
-        'modName : MODULE NAME'
+        '''modName : MODULE NAME'''
 
         nonlocal curentMod
         curentMod = Module(p[2])
 
     def p_renewmod(p):
-        'reModName : MODULE NAME EQUAL NAME'
+        '''reModName : MODULE NAME EQUAL NAME'''
 
         nonlocal curentMod
         mod = pmc.get_module(p[4])
@@ -374,7 +385,7 @@ def myparse(filepath):
         '''listIdState : NAME EQUAL NAME
                        | NAME EQUAL NAME VIRGULE listIdState'''
 
-        dic[p[3]] = rea(p[3],dic)
+        dic[p[3]] = rea(p[3], dic)
         type[p[3]] = type[p[1]]
         try:
             curentMod.replace(dic[p[1]], dic[p[3]])
@@ -383,7 +394,7 @@ def myparse(filepath):
 
     # when finished add the created module to pmc
     def p_endmodule(p):
-        'endmodule : ENDMODULE'
+        '''endmodule : ENDMODULE'''
 
         nonlocal curentMod
         pmc.add_module(curentMod)
@@ -391,8 +402,8 @@ def myparse(filepath):
 
     # list of declarition of states
     def p_state_list(p):
-        '''stateList : stateDecl SC stateList
-                     | empty'''
+        '''stateList : stateDecl SC
+                     | stateDecl SC stateList'''
 
     # state declaration with our without initial value
     def p_statedecl(p):
@@ -418,8 +429,8 @@ def myparse(filepath):
 
     # list of transition
     def p_trans_list(p):
-        '''transList : trans SC transList
-                     | empty'''
+        '''transList : trans SC
+                     | trans SC transList'''
 
     # transition without or with name
     def p_trans(p):
@@ -446,7 +457,7 @@ def myparse(filepath):
 
         if len(p) > 4:
             _, e = p[1]
-            p[0]=p[5] + [[rea(e, dic), p[3]]]
+            p[0] = p[5] + [[rea(e, dic), p[3]]]
         elif len(p) > 3:
             _, e = p[1]
             p[0] = [[rea(e, dic), p[3]]]
@@ -454,8 +465,8 @@ def myparse(filepath):
             p[0] = [[1, p[1]]]
 
     def p_updates(p):
-        '''updates : upd AND updates
-                   | upd'''
+        '''updates : upd
+                   | upd AND updates'''
 
         if len(p) > 2:
             p[0] = {}
@@ -467,35 +478,36 @@ def myparse(filepath):
             p[0] = p[1]
 
     def p_upd(p):
-        'upd : LPAR NAME NEW EQUAL funexp RPAR'
+        '''upd : LPAR NAME NEW EQUAL funexp RPAR'''
 
         _, e = p[5]
         p[0] = {rea(p[2], dic): rea(e, dic)}
 
     # list of LABELS separated by a semicolon
     def p_label_list(p):
-        '''labelList : label SC labelList
-                     | label SC'''
+        '''labelList : label SC
+                     | label SC labelList'''
 
 
     def p_label(p):
-        'label : LABEL QUOTE NAME QUOTE EQUAL listCond'
+        '''label : LABEL QUOTE NAME QUOTE EQUAL listCond'''
 
     def p_list_cond(p):
-        '''listCond : NAME EQUAL funexp AND listCond
-                    | NAME EQUAL funexp'''
+        '''listCond : NAME EQUAL funexp
+                    | NAME EQUAL funexp AND listCond'''
 
     # REWARDS
     def p_rewards(p):
-        '''rewards : REWARDS rew ENDREWARDS rewards
-                   | REWARDS rew ENDREWARDS'''
+        '''rewards : REWARDS rew ENDREWARDS
+                   | REWARDS rew ENDREWARDS rewards'''
 
     def p_rew(p):
-        '''rew : QUOTE NAME QUOTE funexp DDOT funexp SC rew
-               | LCROCHET NAME RCROCHET funexp DDOT funexp SC rew
+        '''rew : QUOTE NAME QUOTE funexp DDOT funexp SC
+               | LCROCHET NAME RCROCHET funexp DDOT funexp SC
+               | LCROCHET RCROCHET funexp DDOT funexp SC
+               | QUOTE NAME QUOTE funexp DDOT funexp SC rew
                | LCROCHET RCROCHET funexp DDOT funexp SC rew
-               | empty'''
-
+               | LCROCHET NAME RCROCHET funexp DDOT funexp SC rew'''
         if p[1] == "[":
             if len(p) == 9:
                 t, e = p[4]
@@ -521,7 +533,7 @@ def myparse(filepath):
                     | ainit AND initlist'''
 
     def p_ainit(p):
-        'ainit : NAME EQUAL funexp'
+        '''ainit : NAME EQUAL funexp'''
 
         t1, e = p[3]
         t2 = type[p[1]]
@@ -584,7 +596,7 @@ def myparse(filepath):
     def p_funexpunary(p):
         '''funexp : LPAR funexp RPAR
                   | NOT funexp
-                  | MINUS funexp'''
+                  | MINUS funexp %prec UNMINUS'''
 
         if len(p) > 3:
             t, e = p[2]
@@ -598,13 +610,18 @@ def myparse(filepath):
         else:
             t, e = p[2]
             if t == "int" or t == "default":
-                p[0] = ["int", "(- %s)" % (e)]
+                p[0] = ["int", "(- %s)" % e]
             else:
                 raise Exception("incompatible type : -" + e)
 
     def p_funexp_float(p):
-        'funexp : FLOAT'
+        '''funexp : FLOAT'''
         p[0] = ["int", p[1]]
+
+
+    def p_funexp_integer(p):
+        '''funexp : INTEGER'''
+        return p
 
     def p_funexp_true_false(p):
         '''funexp : TRUE
@@ -613,20 +630,28 @@ def myparse(filepath):
         p[0] = ["bool", p[1]]
 
     def p_funexp_var(p):
-        'funexp : NAME'
+        '''funexp : NAME'''
 
         p[0] = [type[p[1]], p[1]]
-    
+
     def p_funexp_param(p):
-        'funexp : NAME LACCO funexp RACCO'
+        '''funexp : NAME LACCO funexp RACCO'''
 
         _, e = p[3]
-        p[0] = ["int", "%s(%s)"%(p[1], e)]
+        p[0] = ["int", "%s(%s)" % (p[1], e)]
+
+    def p_funexp_func(p):
+        '''funexp : NAME LPAR funexp RPAR'''
+
+        _, e = p[3]
+        p[0] = ["int", "%s(%s)" % (p[1], e)]
+
 
 # handeling error in parsing
     def p_error(p):
         print("Syntax error in input!")
         print(p)
+        print(yacc.debug_file)
         raise Exception("Syntax error")
 
     parser = yacc.yacc()
@@ -637,4 +662,5 @@ def myparse(filepath):
     print("\nparsing OK\n")
 
     pmc.reinit()
+
     return pmc

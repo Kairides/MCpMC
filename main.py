@@ -95,7 +95,7 @@ def toym():
     estimated_reward, estimated_variance = estim_esp_var(length_of_run, num_of_run, pmc)
 
     def random_val1(q, e):
-        random_valuation = {}
+        random_valuation = dict()
         random_valuation[pmc.param[0]] = q
         for i in range(1, len(pmc.param)):
             param = pmc.param[i]
@@ -111,17 +111,18 @@ def toym():
     ax.errorbar(x, y, yerr=e, fmt='o')
     ax.set_xlabel('q')
     ax.set_ylabel('probability for random valuation')
-    plt.show()
+    plt.savefig('toymul_%d.png' % num_of_run)
+    # plt.show()
 
 
-def nand():
+'''def nand():  # nand.pm n'existe pas
 
     pmc = parsing_aux('example/nand.pm')
 
     num_of_run = 2
     length_of_run = 1000000
 
-    estimated_reward, estimated_variance = estim_esp_var(length_of_run, num_of_run, pmc)
+    estimated_reward, estimated_variance = estim_esp_var(length_of_run, num_of_run, pmc)'''
 
 
 def nand2():
@@ -186,7 +187,7 @@ def zeroconf():
     cb = plt.colorbar(plot)
     cb.set_label("CI width")
     plt.savefig('zeroconf_%d.png' % num_of_run)
-    plt.show()
+    # plt.show()
 
 
 def crowd():
@@ -231,7 +232,7 @@ def crowd():
 
 def main():
 
-    file = 'example/nand.pm'   # Selection du fichier nand.pmdans le dossier example
+    file = 'example/nand.pm'   # Selection du fichier nand.pm dans le dossier example, le fichier nand.pm n'existe pas
     if len(argv) > 1:
         file = argv[1]
     pmc = myparse(file)
@@ -255,16 +256,18 @@ def main():
 
 
 '''def test():
-    num_tour = 100
+    num_tour = 1
 
-    for i in range(1, num_tour):
-        parsing_aux('example/zeroconf.pm')
-        time.sleep(1)
+    for i in range(1, num_tour + 1):
+        print(i)
+        parsing_aux('example/tandem.sm')
+        # time.sleep(1)
 
 
 test()'''
 
-toym()
+# nand2()
+# toym()
 # crowd()
 # zeroconf()
 # toy()

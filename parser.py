@@ -220,20 +220,19 @@ def myparse(filepath):
 
     # PRECEDENCE of opreators
     precedence = (
-                  ('nonassoc', 'NAME'),
                   ('left', 'OR'),
                   ('left', 'AND'),
                   ('nonassoc', 'GEQ', 'LEQ', 'LS', 'GS', 'EQUAL'),
                   ('left', 'PLUS', 'MINUS'),
                   ('left', 'MULT', 'DIV'),
                   ('right', 'NOT', 'UNMINUS'),
-                  ('nonassoc', 'LACCO', 'RACCO', 'LCROCHET', 'RCROCHET'),
-                  ('nonassoc', 'LPAR', 'RPAR'),
+                  ('right', 'LACCO', 'LCROCHET', 'LPAR'),
+                  ('left', 'RACCO', 'RCROCHET', 'RPAR'),
                   ('left', 'DDOT'),
-                  ('left', 'PARAM'),
+                  ('left', 'PARAM', 'CONST', 'NAME'),
+                  ('right', 'MODULE', 'REWARDS'),
+                  ('left', 'ENDMODULE', 'ENDREWARDS'),
                   ('left', 'SC'),
-                  ('left', 'MODULE', 'ENDMODULE'),
-                  ('left', 'REWARDS', 'ENDREWARDS'),
                   )
 
     # STARTING rule
@@ -245,7 +244,7 @@ def myparse(filepath):
 
     def p_begining(p):
         'def : mdptype unfold'
-        # print(1)
+        # print(p[1])
 
     def p_unfold(p):
         '''unfold : declParamList unfold
@@ -256,7 +255,14 @@ def myparse(filepath):
                   | rewards unfold
                   | initdef unfold
                   | formulas unfold
-                  | empty'''
+                  | declParamList
+                  | declConstList
+                  | declGlobalList
+                  | moduleList
+                  | labelList
+                  | rewards
+                  | initdef
+                  | formulas'''
 
     def p_formulas(p):
         '''formulas : formula SC
@@ -320,14 +326,16 @@ def myparse(filepath):
                          | declConst SC declConstList'''
 
     def p_decl_constl(p):
-        '''declConst : CONST type NAME EQUAL funexp'''
+        '''declConst : CONST type NAME EQUAL funexp
+                     | CONST type NAME'''
 
-        t, e = p[5]
-        if t == p[2]:
-            dic[p[3]] = rea(e, dic)
-            type[p[3]] = p[2]
-        else:
-            raise Exception("invalid type cons decl : " + p[3] + " " + t + " " + p[2])
+        if (len(p) == 5):
+            t, e = p[5]
+            if t == p[2]:
+                dic[p[3]] = rea(e, dic)
+                type[p[3]] = p[2]
+            else:
+                raise Exception("invalid type cons decl : " + p[3] + " " + t + " " + p[2])
 
     # list of GLOBAL VARIABLES separated by a semicolon
     def p_globall_list(p):
@@ -357,28 +365,28 @@ def myparse(filepath):
 
     # list of MODULES
     def p_module_list(p):
-        '''moduleList : module
-                      | module moduleList'''
+        '''moduleList : MODULE module endmodule
+                      | MODULE module endmodule moduleList'''
 
     # For a module either
     # 1 define a new module
     # 2 define a module as renaming a previous one
     def p_module(p):
-        '''module : modName stateList transList endmodule
-                  | reModName  LCROCHET listIdState RCROCHET endmodule'''
+        '''module : modName stateList transList
+                  | reModName  LCROCHET listIdState RCROCHET '''
 
     def p_new_mod(p):
-        '''modName : MODULE NAME'''
+        '''modName : NAME'''
 
         nonlocal curentMod
-        curentMod = Module(p[2])
+        curentMod = Module(p[1])
 
     def p_renewmod(p):
-        '''reModName : MODULE NAME EQUAL NAME'''
+        '''reModName : NAME EQUAL NAME'''
 
         nonlocal curentMod
-        mod = pmc.get_module(p[4])
-        curentMod = mod.copy(p[2])
+        mod = pmc.get_module(p[3])
+        curentMod = mod.copy(p[1])
 
     # renaming a module
     def p_list_id_state(p):

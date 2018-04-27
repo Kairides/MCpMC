@@ -225,6 +225,10 @@ def myparse(filepath):
                   ('left', 'PLUS', 'MINUS'),
                   ('left', 'MULT', 'DIV'),
                   ('right', 'NOT', 'UNMINUS'),
+                  ('right', 'LACCO', 'LPAR', 'LCROCHET'),
+                  ('left', 'RACCO', 'RPAR', 'RCROCHET'),
+                  ('left', 'DDOT'),
+                  ('left', 'CONST', 'NAME'),
                   ('nonassoc', 'MODULE', 'REWARDS', 'ENDMODULE', 'ENDREWARDS'),
                   ('left', 'SC'),
                   )
@@ -273,7 +277,7 @@ def myparse(filepath):
         '''mdptype : MDP
                    | CTMC
                    | DTMC'''
-        if p[1] not in ("dtmc", "probabilistic"):
+        if p[1] not in ("dtmc", "probabilistic", "ctmc"):
             print(p[1])
             print(" WARNING !! only probabilistic model are supported yet")
 
@@ -319,13 +323,19 @@ def myparse(filepath):
                          | declConst SC'''
 
     def p_decl_constl(p):
-        'declConst : CONST type NAME EQUAL funexp'
-        t,e = p[5]
-        if t == p[2]:
-            dic[p[3]] = rea(e, dic)
-            type[p[3]] = p[2]
+        '''declConst : CONST type NAME
+                     | CONST type NAME  EQUAL funexp'''
+
+        if len(p) > 5:
+            t, e = p[5]
+            if t == p[2]:
+                dic[p[3]] = rea(e, dic)
+                type[p[3]] = p[2]
+            else:
+                raise Exception("invalid type cons decl : "+p[3]+" "+t+" "+p[2])
         else:
-            raise Exception("invalid type cons decl : "+p[3]+" "+t+" "+p[2])
+            dic[p[3]] = rea("default", dic)
+            type[p[3]] = p[2]
 
 
     # list of GLOBAL VARIABLES separated by a semicolon
@@ -357,27 +367,27 @@ def myparse(filepath):
 
     # list of MODULES
     def p_module_list(p):
-        '''moduleList : module moduleList
-                      | module'''
+        '''moduleList : MODULE module endmodule moduleList
+                      | MODULE module endmodule'''
 
     # For a module either
     # 1 define a new module
     # 2 define a module as renaming a previous one
     def p_module(p):
-        '''module : modName stateList transList endmodule
-                  | reModName  LCROCHET listIdState RCROCHET endmodule'''
+        '''module : modName stateList transList
+                  | reModName  LCROCHET listIdState RCROCHET'''
 
 
     def p_new_mod(p):
-        'modName : MODULE NAME'
+        'modName : NAME'
         nonlocal curentMod
-        curentMod = Module(p[2])
+        curentMod = Module(p[1])
 
     def p_renewmod(p):
-        'reModName : MODULE NAME EQUAL NAME'
+        'reModName : NAME EQUAL NAME'
         nonlocal curentMod
-        mod = pmc.get_module(p[4])
-        curentMod = mod.copy(p[2])
+        mod = pmc.get_module(p[3])
+        curentMod = mod.copy(p[1])
 
     # renaming a module
     def p_list_id_state(p):

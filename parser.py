@@ -7,28 +7,32 @@ from modules import PmcModules, Module
 
 
 # used to define multiple parameters in one go of the form param int p{0..N}; utilise apres p{x}
-paramnameglob=""
+paramnameglob = ""
+
+
 class my_func(Function):
     @classmethod
     def eval(cls, exp):
         global paramnameglob
         if exp.is_Number:
             return Symbol(paramnameglob+str(exp))
+
+
 #@profile
 def myparse(filepath):
-    #associate to string their expression
-    dic={}
+    # associate to string their expression
+    dic = {}
     # associate to string their type (or default when variable are not yet define) !! float are treated as int
-    type=defaultdict(lambda: "default")
+    type = defaultdict(lambda: "default")
     
     # The pmc we are building
-    pmc=PmcModules()
+    pmc = PmcModules()
     
-    #The module that is currently built
+    # The module that is currently built
     curentMod = None
 
 
-###############################@ LEXER #########################@
+# ##############################@ LEXER #########################@
     tokens =(
         'DOUBLE',
         'FLOAT',
@@ -37,15 +41,15 @@ def myparse(filepath):
         'EQUAL',
         'AND', 'NOT', 'OR',
         'LEQ', 'GEQ', 'GS', 'LS',
-             #type of the parsed file
+             # type of the parsed file
         'DTMC', 'CTMC', 'MDP',
              # keywords
         'MODULE', 'ENDMODULE', 'REWARDS', 'ENDREWARDS', 'INIT', 'ENDINIT', 'PARAM', 'CONST', 'LABEL', 'GLOBALL', 'FORMULA',
-             #string for variable names
+             # string for variable names
         'NAME',
-             #special char
+             # special char
         'DDOT', 'LCROCHET', 'RCROCHET', 'POINTPOINT', 'LPAR', 'RPAR', 'FLECHE', 'NEW', 'SC', 'VIRGULE', 'QUOTE', 'LACCO', 'RACCO',
-             #types
+             # types
         'INT', 'TYPEFLOAT', 'BOOL',
              # boolean
         'TRUE', 'FALSE',
@@ -175,7 +179,7 @@ def myparse(filepath):
     t_MINUS=r'-'
     t_DIV=r'/'
     t_MULT=r'\*'
-    t_NAME=r'[a-zA-Z_][a-zA-Z_0-9]*' # TODO : Verifier la premiere partie de la regex
+    t_NAME=r'[a-zA-Z_][a-zA-Z_0-9]*'
     t_EQUAL=r'='
     t_DDOT=r':'
     t_LCROCHET=r'\['
@@ -192,7 +196,7 @@ def myparse(filepath):
     t_OR=r'\|'
 
 
-#ignore space tab and new line
+# ignore space tab and new line
     t_ignore  = ' \n\t'
 
 # error handeling in lexer
@@ -203,9 +207,7 @@ def myparse(filepath):
 
     lexer = lex.lex()
 
-
-
-    ####################### PARSER ############################
+    # ###################### PARSER ############################
 
     # PRECEDENCE of opreators
     precedence = (
@@ -221,13 +223,13 @@ def myparse(filepath):
     # STARTING rule
     start = 'def'
 
-    #empty for list
+    # empty for list
     def p_empty(p):
         'empty :'
 
     def p_begining(p):
         'def : mdptype unfold'
-        #print(1)
+        # print(1)
 
     def p_unfold(p):
         '''unfold : declParamList unfold
@@ -247,8 +249,8 @@ def myparse(filepath):
 
     def p_formula(p):
         'formula : FORMULA NAME EQUAL funexp'
-        t,e = p[4]
-        dic[p[2]]=rea(e, dic)
+        t, e = p[4]
+        dic[p[2]] = rea(e, dic)
 
     #type : MDP
     def p_mdptype(p):
@@ -268,7 +270,7 @@ def myparse(filepath):
     def p_declParaml(p):
         '''declParam : PARAM type NAME DDOT LCROCHET funexp POINTPOINT funexp RCROCHET
                     | PARAM type NAME'''
-        dic[p[3]] = rea(p[3],dic)
+        dic[p[3]] = rea(p[3], dic)
         type[p[3]] = "int"
         pmc.add_parameter(dic[p[3]])
     
@@ -277,8 +279,8 @@ def myparse(filepath):
         global paramnameglob
         paramnameglob = p[3]
         dic[p[3]] = my_func
-        t1,e1 = p[5]
-        t2,e2 = p[7]
+        t1, e1 = p[5]
+        t2, e2 = p[7]
         for i in range(rea(e1, dic), rea(e2, dic)+1):
             pmc.add_parameter(Symbol(p[3]+str(i)))
     
@@ -304,7 +306,7 @@ def myparse(filepath):
         'declConst : CONST type NAME EQUAL funexp'
         t,e = p[5]
         if t == p[2]:
-            dic[p[3]] = rea(e,dic)
+            dic[p[3]] = rea(e, dic)
             type[p[3]] = p[2]
         else:
             raise Exception("invalid type cons decl : "+p[3]+" "+t+" "+p[2])
@@ -320,18 +322,18 @@ def myparse(filepath):
         '''declGlobal : GLOBALL NAME DDOT LCROCHET funexp POINTPOINT funexp RCROCHET
             | GLOBALL NAME DDOT LCROCHET funexp POINTPOINT funexp RCROCHET INIT funexp
             | GLOBALL NAME DDOT BOOL'''
-        dic[p[2]] = rea(p[2],dic)
+        dic[p[2]] = rea(p[2], dic)
         if len(p) > 10:
             type[p[2]] = "int"
-            t1,e1 = p[5]
-            t2,e2 = p[7]
-            pmc.add_global_variable(dic[p[2]], rea(e1,dic), rea(e2,dic))
+            t1, e1 = p[5]
+            t2, e2 = p[7]
+            pmc.add_global_variable(dic[p[2]], rea(e1, dic), rea(e2, dic))
         elif len(p) > 6:
-            t1,e1 = p[5]
-            t2,e2 = p[7]
-            t3,e3 = p[10]
+            t1, e1 = p[5]
+            t2, e2 = p[7]
+            t3, e3 = p[10]
             type[p[2]] = "int"
-            pmc.add_global_variable(dic[p[2]], rea(e1,dic), rea(e2,dic), rea(e3,dic))
+            pmc.add_global_variable(dic[p[2]], rea(e1, dic), rea(e2, dic), rea(e3, dic))
         else:
             type[p[2]] = "bool"
             pmc.add_global_variable(dic[p[2]], rea("true", dic), rea("false", dic))
@@ -365,7 +367,7 @@ def myparse(filepath):
     def p_listIdState(p):
         '''listIdState : NAME EQUAL NAME
             | NAME EQUAL NAME VIRGULE listIdState'''
-        dic[p[3]] = rea(p[3],dic)
+        dic[p[3]] = rea(p[3], dic)
         type[p[3]] = type[p[1]]
         try:
             curentMod.replace(dic[p[1]], dic[p[3]])
@@ -377,7 +379,7 @@ def myparse(filepath):
         'endmodule : ENDMODULE'
         nonlocal curentMod
         pmc.add_module(curentMod)
-        curentMod=None
+        curentMod = None
 
     # list of declarition of states
     def p_stateList(p):
@@ -417,8 +419,8 @@ def myparse(filepath):
         '''trans : LCROCHET RCROCHET funexp FLECHE updatesProb
                 | LCROCHET NAME RCROCHET funexp FLECHE updatesProb'''
         if len(p) == 6:
-            t,e = p[3]
-            if t=="bool":
+            t, e = p[3]
+            if t == "bool":
                 curentMod.add_transition("", rea(e, dic), p[5])
             else:
                 raise Exception('Not bool in cond'+e)
@@ -435,13 +437,13 @@ def myparse(filepath):
             | funexp DDOT updates
             | updates'''
         if len(p) > 4:
-            _,e = p[1]
-            p[0]=p[5]+[[rea(e, dic), p[3]]]
+            _, e = p[1]
+            p[0] = p[5]+[[rea(e, dic), p[3]]]
         elif len(p) > 3:
-            _,e = p[1]
+            _, e = p[1]
             p[0] = [[rea(e, dic), p[3]]]
         else:
-            p[0]=[[1, p[1]]]
+            p[0] = [[1, p[1]]]
 
 
     def p_updates(p):
@@ -516,7 +518,7 @@ def myparse(filepath):
 
     def p_ainit(p):
         'ainit : NAME EQUAL funexp'
-        t1,e = p[3]
+        t1, e = p[3]
         t2 = type[p[1]]
         if t1 == t2:
             pmc.set_init_value(rea(p[1], dic), rea(e, dic))
@@ -532,7 +534,7 @@ def myparse(filepath):
             | funexp DIV funexp
             | funexp MULT funexp'''
         t1, e1 = p[1]
-        t2,e2 = p[3]
+        t2, e2 = p[3]
         if t1 == t2 or t1 == "default" or t2 == "default":
             p[0] = ["int", "(%s)"%(e1+p[2]+e2)]
         else:
@@ -543,10 +545,10 @@ def myparse(filepath):
             | funexp GS funexp
             | funexp LS funexp
             | funexp LEQ funexp'''
-        t1,e1 = p[1]
-        t2,e2 = p[3]
+        t1, e1 = p[1]
+        t2, e2 = p[3]
         if t1 == t2 or t1 == "default" or t2 == "default":
-            p[0]=["bool", "(%s)"%(e1+p[2]+e2)]
+            p[0] = ["bool", "(%s)"%(e1+p[2]+e2)]
         else:
             raise Exception("Incompatible type in : "+e1+p[2]+e2)
 
@@ -554,18 +556,18 @@ def myparse(filepath):
         '''funexp : funexp EQUAL funexp'''
         t1, e1 = p[1]
         t2, e2 = p[3]
-        if (t1 == t2 and (t1 == "bool" or t1=="default")) or ("default" in (t1, t2) and "bool" in (t1, t2)):
-            p[0]=["bool", "(%s&%s)"%(e1, e2)]
+        if (t1 == t2 and (t1 == "bool" or t1 == "default")) or ("default" in (t1, t2) and "bool" in (t1, t2)):
+            p[0] = ["bool", "(%s&%s)"%(e1, e2)]
         elif t1 == t2 or t1 == "default" or t2 == "default":
-            p[0]=["bool", "((%s >= 0)&(%s <= 0))"%(e1+"-"+e2, e1+"-"+e2)]
+            p[0] = ["bool", "((%s >= 0)&(%s <= 0))"%(e1+"-"+e2, e1+"-"+e2)]
         else:
             raise Exception("Incompatible type in : "+e1+p[2]+e2)
 
     def p_funexpand(p):
         '''funexp : funexp AND funexp
             | funexp OR funexp'''
-        t1,e1 = p[1]
-        t2,e2 = p[3]
+        t1, e1 = p[1]
+        t2, e2 = p[3]
         if t1 == t2 or t1 == "default" or t2 == "default":
             p[0] = ["bool", "(%s)"%(e1+p[2]+e2)]
         else:
@@ -576,18 +578,18 @@ def myparse(filepath):
             | NOT funexp
             | MINUS funexp'''
         if len(p) > 3:
-            t,e = p[2]
-            p[0] = [t, "(%s)"%e]
+            t, e = p[2]
+            p[0] = [t, "(%s)" % e]
         elif p[1] == '!':
             t, e = p[2]
             if t == "bool" or t == "default":
-                p[0] = ["bool", "(~%s)"%e]
+                p[0] = ["bool", "(~%s)" % e]
             else:
                 raise Exception("incompatible type : ~"+e)
         else:
-            t,e = p[2]
+            t, e = p[2]
             if t == "int" or t == "default":
-                p[0] = ["int", "(- %s)"%(e)]
+                p[0] = ["int", "(- %s)" % e]
             else:
                 raise Exception("incompatible type : -"+e)
 
@@ -607,7 +609,7 @@ def myparse(filepath):
     
     def p_funexpParam(p):
         'funexp : NAME LACCO funexp RACCO'
-        _,e = p[3]
+        _, e = p[3]
         p[0] = ["int", "%s(%s)"%(p[1], e)]
 
 

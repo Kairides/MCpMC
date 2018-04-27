@@ -511,7 +511,7 @@ def myparse(filepath):
                | LCROCHET NAME RCROCHET funexp DDOT funexp SC
                | LCROCHET RCROCHET funexp DDOT funexp SC'''
         if p[1] == "[":
-            if len(p) == 9:
+            if len(p) >= 8:
                 t, e = p[4]
                 _, er = p[6]
                 if t == 'bool':
@@ -626,7 +626,23 @@ def myparse(filepath):
     def p_funexp_param(p):
         'funexp : NAME LACCO funexp RACCO'
         _, e = p[3]
-        p[0] = ["int", "%s(%s)"%(p[1], e)]
+        p[0] = ["int", "%s(%s)" % (p[1], e)]
+
+    def p_funexp_func(p):
+        '''funexp : NAME LPAR funexp RPAR
+                  | NAME LPAR funexp VIRGULE funexp RPAR'''
+
+        if p[4] == ')':
+            t, e = p[3]
+            p[0] = [t, "%s(%s)" % (p[1], e)]
+
+        elif p[4] == ',':
+            _, e1 = p[3]
+            _, e2 = p[5]
+            p[0] = ["int", "%s(%s,%s)" % (p[1], e1, e2)]
+
+        else:
+            print("bisou")
 
 
 # handeling error in parsing

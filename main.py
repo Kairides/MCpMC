@@ -17,15 +17,17 @@ import sympy
 
 # @profile
 
+# Auxiliary function used to parse the file in parameter and calculate how long it took
 def parsing_aux(nom):
 
-    time1 = time.time()
-    pmc = myparse(nom)
-    time2 = time.time()
-    print('parsing of %s took %0.3f ms' % (nom, (time2-time1)*1000.0))
+    time1 = time.time()  # First time
+    pmc = myparse(nom)  # Parsing
+    time2 = time.time()  # Second time
+    print('parsing of %s took %0.3f ms' % (nom, (time2-time1)*1000.0))  # printing the time it took to parse
     return pmc
 
 
+# function used to calculate the mean and variance
 def estim_esp_var(length_of_run, num_of_run, pmc, value=None):
 
     time1 = time.time()
@@ -50,13 +52,17 @@ def vectorize_v(pmc, estim_variance):
     return np.vectorize(v)
 
 
+# Test function for toy
 def toy():
 
+    # File selection
     pmc = parsing_aux('example/toy.pm')
 
+    # Number of runs and their length
     num_of_run = 10000
     length_of_run = 100
 
+    # Mean and variance
     estimated_reward, estimated_variance = estim_esp_var(length_of_run, num_of_run, pmc)
 
     fig = plt.figure()
@@ -85,13 +91,17 @@ def toy():
     plt.savefig('toy_%d.png' % num_of_run)
 
 
+# Test function for toymul
 def toym():
 
+    # File selection
     pmc = parsing_aux('example/toymul.pm')
 
+    # Number of runs and their length
     num_of_run = 10000
     length_of_run = 100
 
+    # Mean and variance
     estimated_reward, estimated_variance = estim_esp_var(length_of_run, num_of_run, pmc)
 
     def random_val1(q, e):
@@ -125,15 +135,20 @@ def toym():
     estimated_reward, estimated_variance = estim_esp_var(length_of_run, num_of_run, pmc)'''
 
 
+# Test function for nand2.pm
 def nand2():
 
+    # File selection
     pmc = parsing_aux('example/nand2.pm')
 
+    # Number of runs and their length
     num_of_run = 1000
     length_of_run = 1000000
 
+    # Mean and variance
     estimated_reward, estimated_variance = estim_esp_var(length_of_run, num_of_run, pmc, {pmc.param[0]: 0.02, pmc.param[1]: 0.9})
 
+    # Plotting
     fig = plt.figure()
 
     ax = Axes3D(fig)
@@ -143,8 +158,8 @@ def nand2():
 
     vv = vectorize_v(pmc, estimated_variance)
 
-    x = np.arange(0.05, 0.95, 0.01)
-    big_x, big_y = np.meshgrid(x, x)
+    x, y = np.arange(0.05, 0.95, 0.01)
+    big_x, big_y = np.meshgrid(x, y)
 
     big_z = fv(big_x, big_y)
     big_c = 2 * 1.96 * vv(big_x, big_y) / sqrt(num_of_run)
@@ -157,16 +172,21 @@ def nand2():
     plt.savefig('nand2_%d.png' % num_of_run)
 
 
+# Test function for zeroconf
 def zeroconf():
 
+    # File selection
     pmc = parsing_aux('example/zeroconf.pm')
 
+    # Number of runs and their length
     num_of_run = 10000
     length_of_run = 500
 
+    # Mean and variance
     estimated_reward, estimated_variance = estim_esp_var(length_of_run, num_of_run, pmc)
     # ,{pmc.param[0]:0.3,pmc.param[1]:0.3})
 
+    # Plotting
     fig = plt.figure()
 
     ax = Axes3D(fig)
@@ -176,8 +196,8 @@ def zeroconf():
 
     vv = vectorize_v(pmc, estimated_variance)
 
-    x = np.arange(0.15, 0.55, 0.005)
-    big_x, big_y = np.meshgrid(x, x)
+    x, y = np.arange(0.15, 0.55, 0.005)
+    big_x, big_y = np.meshgrid(x, y)
     big_z = fv(big_x, big_y)
     big_c = 2*1.96*vv(big_x, big_y)/sqrt(num_of_run)
     plot = ax.scatter(big_x, big_y, big_z, c=big_c.ravel())
@@ -190,13 +210,17 @@ def zeroconf():
     # plt.show()
 
 
+# Test function for crowds
 def crowd():
 
+    # File selection
     pmc = parsing_aux('example/crowds.pm')
 
+    # Number of runs and their length
     num_of_run = 10000
     length_of_run = 1000000
 
+    # Mean and variance
     estimated_reward, estimated_variance = estim_esp_var(length_of_run, num_of_run, pmc)
     # ,{pmc.param[0]:0.8,pmc.param[1]:1/6})
 
@@ -255,19 +279,10 @@ def main():
     print(3.92/sqrt(num_of_run)*mysub(estimated_variance, random_valuation))
 
 
-'''def test():
-    num_tour = 1
-
-    for i in range(1, num_tour + 1):
-        print(i)
-        parsing_aux('example/tandem.sm')
-        # time.sleep(1)
-
-
-test()'''
+# parsing_aux("example/toy.pm")
 
 # nand2()
 # toym()
 # crowd()
 # zeroconf()
-# toy()
+toy()

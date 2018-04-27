@@ -229,9 +229,8 @@ def myparse(filepath):
                   ('right', 'LACCO', 'LCROCHET', 'LPAR'),
                   ('left', 'RACCO', 'RCROCHET', 'RPAR'),
                   ('left', 'DDOT'),
-                  ('left', 'PARAM', 'CONST', 'NAME'),
-                  ('right', 'MODULE', 'REWARDS'),
-                  ('left', 'ENDMODULE', 'ENDREWARDS'),
+                  ('left', 'CONST', 'NAME'),
+                  ('nonassoc', 'MODULE', 'REWARDS', 'ENDMODULE', 'ENDREWARDS'),
                   ('left', 'SC'),
                   )
 
@@ -302,11 +301,11 @@ def myparse(filepath):
 
         global paramnameglob
         paramnameglob = p[3]
-        dic[p[3]] = MyFunc
+        dic[paramnameglob] = MyFunc
         t1, e1 = p[5]
         t2, e2 = p[7]
-        for i in range(rea(e1, dic), rea(e2, dic) + 1):
-            pmc.add_parameter(Symbol(p[3] + str(i)))
+        for i in range(rea(e1, dic), rea(e2, dic) + 1):  # rea(e, dic) n'est pas un integer, range ne fonctionne pas
+            pmc.add_parameter(Symbol(paramnameglob + str(i)))
 
     def p_type(p):
         '''type : empty
@@ -327,9 +326,10 @@ def myparse(filepath):
 
     def p_decl_constl(p):
         '''declConst : CONST type NAME EQUAL funexp
-                     | CONST type NAME'''
+                     | CONST type NAME
+                     | CONST type NAME LACCO funexp POINTPOINT funexp RACCO'''
 
-        if (len(p) == 5):
+        if len(p) == 5:
             t, e = p[5]
             if t == p[2]:
                 dic[p[3]] = rea(e, dic)
@@ -417,15 +417,19 @@ def myparse(filepath):
     def p_statedecl(p):
         '''stateDecl : NAME DDOT LCROCHET funexp POINTPOINT funexp RCROCHET
                      | NAME DDOT LCROCHET funexp POINTPOINT funexp RCROCHET INIT funexp
-                     | NAME DDOT BOOL'''
+                     | NAME DDOT BOOL
+                     | NAME DDOT BOOL INIT funexp'''
 
         dic[p[1]] = rea(p[1], dic)
-        if len(p) > 8:
+        if len(p) > 9:
             _, e1 = p[4]
-            _, e2 = p[5]
+            _, e2 = p[6]
             _, e3 = p[9]
             curentMod.add_state(dic[p[1]], rea(e1, dic), rea(e2, dic), rea(e3, dic))
             type[p[1]] = "int"
+        elif len(p) == 6:
+            type[p[1]] = "bool"
+            curentMod.add_state(dic[p[1]], True, False, p[5])
         elif len(p) > 5:
             type[p[1]] = "int"
             _, e1 = p[4]
@@ -445,18 +449,19 @@ def myparse(filepath):
         '''trans : LCROCHET RCROCHET funexp FLECHE updatesProb
                  | LCROCHET NAME RCROCHET funexp FLECHE updatesProb'''
 
-        if len(p) == 6:
+        if p[3] == "]":
+            t, e = p[4]
+            if t == "bool" or t == "default":
+                curentMod.add_transition("", rea(e, dic), p[6])
+            else:
+                raise Exception('Not bool in cond' + e)  # 1
+        else:
             t, e = p[3]
             if t == "bool":
-                curentMod.add_transition("", rea(e, dic), p[5])
+                curentMod.add_transition(p[2], rea(e, dic), p[5])
             else:
                 raise Exception('Not bool in cond' + e)
-        else:
-            t, e = p[4]
-            if t == "bool":
-                curentMod.add_transition(p[2], rea(e, dic), p[6])
-            else:
-                raise Exception('Not bool in cond'+e)
+
 
     def p_updates_prob(p):
         '''updatesProb : funexp DDOT updates PLUS updatesProb
@@ -517,7 +522,7 @@ def myparse(filepath):
                | LCROCHET RCROCHET funexp DDOT funexp SC rew
                | LCROCHET NAME RCROCHET funexp DDOT funexp SC rew'''
         if p[1] == "[":
-            if len(p) == 9:
+            if p[3] == "]":
                 t, e = p[4]
                 _, er = p[6]
                 if t == 'bool':
@@ -545,7 +550,7 @@ def myparse(filepath):
 
         t1, e = p[3]
         t2 = type[p[1]]
-        if t1 == t2:
+        if t1 == t2 or t1 == "default" or t2 == "default":
             pmc.set_init_value(rea(p[1], dic), rea(e, dic))
         else:
             raise Exception("bad type in init :" + e + " = " + p[1])
@@ -649,16 +654,21 @@ def myparse(filepath):
         p[0] = ["int", "%s(%s)" % (p[1], e)]
 
     def p_funexp_func(p):
-        '''funexp : NAME LPAR funexp RPAR'''
+        '''funexp : NAME LPAR funexp RPAR
+                  | NAME LPAR funexp VIRGULE funexp RPAR'''
 
-        _, e = p[3]
-        p[0] = ["int", "%s(%s)" % (p[1], e)]
+        if len(p) < 5:
+            _, e = p[3]
+            p[0] = ["int", "%s(%s)" % (p[1], e)]
+        else:
+            _, e1 = p[3]
+            _, e2 = p[5]
+            p[0] = ["int", "%s(%s,%s)" % (p[1], e1, e2)]
 
 
 # handeling error in parsing
     def p_error(p):
         print("Syntax error in input!")
-        print(p)
         print(yacc.debug_file)
         raise Exception("Syntax error")
 

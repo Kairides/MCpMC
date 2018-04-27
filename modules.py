@@ -21,7 +21,6 @@ def exp_to_fun(exp):
             return f(*eval)
         return g
     else:
-        
         return lambda *x: exp
 
 
@@ -82,8 +81,14 @@ class Module:
         mod.current_value_state = copy_dict(self.current_value_state)
         mod.alph = copy_dict(self.alph)
         mod.trans = []
-        for namet, cond, outcom in self.trans:
-            mod.add_transition(namet, cond, list(outcom))
+
+        for i in range(0, len(self.trans)):
+            namet = self.trans[i][0]
+            cond = self.trans[i][1]
+            outcom = self.trans[i][2]
+
+            mod.add_transition(namet, cond, outcom)
+
         return mod
 
     def replace(self, name1, name2):
@@ -96,13 +101,15 @@ class Module:
         substitution = {name1: name2}
         new_trans = []
         for i in range(0, len(self.trans)):
-            name, cond, outcom = self.trans[i]
-            if name == name1:
+            namet = self.trans[i][0]
+            cond = self.trans[i][1]
+            outcom = self.trans[i][2]
+            if namet == name1:
                 new_name = name2
                 self.alph[name2] = True
                 del self.alph[name1]
             else:
-                new_name = name
+                new_name = namet
             new_outcom = []
             for var, update in outcom:
                 new_outcom += [[mysub(var, substitution),
@@ -166,6 +173,8 @@ class PmcModules:
 
     def get_possible_transitions(self):
         """ return the doable transitions """
+
+        # All the possible transitions in the chain
         res = [m.get_possible_transitions(self.current_value_global) for m in self.modules]
         name = [[tr[0] for tr in t if tr[0] != ""] for t in res]
 

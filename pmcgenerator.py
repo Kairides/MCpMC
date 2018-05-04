@@ -15,8 +15,8 @@ def random_rate(pmc_type, parameters=None, rate=None):
         if parameters and rate:
             val = random.random()
             if val <= rate:
-                index = random.randint(0, len(parameters)-1)
-                return parameters[index]
+                index = random.randint(1, parameters + 1)
+                return "p" + str(index)
 
             else:
                 return random.randint(0, 100)
@@ -30,8 +30,8 @@ def random_rate(pmc_type, parameters=None, rate=None):
 # Function writing parameters in the file
 def param_writing(file, parameters):
 
-    for i in range(0, len(parameters)):
-        file.write("const double " + str(parameters[i]) + "; \n")
+    for i in range(1, parameters + 1):
+        file.write("const double p" + str(i) + "; \n")
 
     file.write("\n")
     return file
@@ -76,7 +76,7 @@ def module_writing(file, pmc_type, nb_state, maximum_degree, parameters=None, ra
             reached_states = []
 
             if pmc_type == "ctmc":
-                for j in range(0, maximum_degree):
+                for j in range(1, random.randint(2, maximum_degree + 1)):
                     transition_rate = random_rate(pmc_type, parameters, rate)
                     new_state = state_transition(reached_states, nb_state - 1)
                     trans = "\t"+"[] s="+str(i)+" -> "+str(transition_rate)+": (s' = "+str(new_state)+");\n"
@@ -108,8 +108,8 @@ def module_writing(file, pmc_type, nb_state, maximum_degree, parameters=None, ra
                         else:
                             val = random.random()
                             if val <= rate:
-                                index = random.randint(0, len(parameters) - 1)
-                                transition = parameters[index]
+                                index = random.randint(1, parameters + 1)
+                                transition = "p" + str(index)
                                 param_state.append(transition)
                             else:
                                 transition = float("{0:.3f}".format(random.random()))
@@ -119,9 +119,12 @@ def module_writing(file, pmc_type, nb_state, maximum_degree, parameters=None, ra
                                         for k in range(0, len(param_state)):
                                             transition += param_state[k] + " + "
                                         transition += str(proba_state) + ")"
+                                        proba_state = 1
                                     else:
                                         transition = (1 - proba_state)
                                         proba_state += transition
+                                else:
+                                    proba_state += transition
                     else:
                         transition = float("{0:.3f}".format(random.random()))
                         if proba_state + transition > 1:
@@ -170,4 +173,4 @@ def pmc_constructor(nom, pmc_type, nb_state, maximum_degree, parameters=None, ra
 #     -If you want to generate a pMC, parameters should be send as a list of characters
 #     -If you want to generate a pMC, parameters should be send with a rate, if send without,
 #      a regular MC will be generated
-pmc_constructor("test", "dtmc", 10, 7, ['p'], 0.4)
+pmc_constructor("test", "ctmc", 10, 5, 3, 0.4)

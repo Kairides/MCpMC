@@ -8,7 +8,7 @@ def typennotexp(expr):
     return isinstance(expr, (int, float))
 
 
-def sim(length, pmc, valu=None):
+def sim(length, pmc, value=None):
     """simulate pMC once for at most length step
         return the accumulated reward"""
     pmc.reinit()
@@ -16,50 +16,71 @@ def sim(length, pmc, valu=None):
     step = 0
     cumu_reward = 0
     prob = 1
-    while step < length and not end:
-        step += 1
-        numb_mod_deadlocked = 0
-        for trans_mod in pmc.get_possible_transitions():
-            if len(trans_mod) > 1:
-                raise Exception("several actions possible")
-            if trans_mod:
-                if valu is None:
-                    name, _, outcom = trans_mod[0]
-                    norma = sum(not typennotexp(e[0]) for e in outcom)
-                    threshold = random()
-                    j = 0
-                    while j < len(outcom) and threshold > 0:
-                        if typennotexp(outcom[j][0]):
-                            threshold -= outcom[j][0]
-                        else:
-                            threshold -= 1/norma
-                        j += 1
-                    j -= 1
-                    realprob = outcom[j][0]
-                    if typennotexp(realprob):
-                        prob *= mysub(realprob, pmc.get_valuation())/realprob
+    if pmc.get_pMCtype() == "dtmc" or pmc.get_pMCtype() == "probabilistic":  # Simulation for dtmc and probabilistic MC
+        while step < length and not end:
+            step += 1
+            numb_mod_deadlocked = 0
+            for trans_mod in pmc.get_possible_transitions():
+                if trans_mod:
+                    # print(len(trans_mod))
+                    if len(trans_mod) > 1:
+                        raise Exception("several actions possible")
                     else:
-                        prob *= mysub(realprob, pmc.get_valuation())*norma
-                    pmc.maj(outcom[j][1])
-                    cumu_reward += pmc.get_reward(name)
+                        if value is None:
+                            name, _, outcome = trans_mod[0]
+                            norma = sum(not typennotexp(e[0]) for e in outcome)
+                            threshold = random()
+                            j = 0
+                            while j < len(outcome) and threshold > 0:
+                                if typennotexp(outcome[j][0]):
+                                    threshold -= outcome[j][0]
+                                else:
+                                    threshold -= 1/norma
+                                j += 1
+                            j -= 1
+                            realprob = outcome[j][0]
+                            if typennotexp(realprob):
+                                prob *= mysub(realprob, pmc.get_valuation())/realprob
+                            else:
+                                prob *= mysub(realprob, pmc.get_valuation())*norma
+                            pmc.maj(outcome[j][1])
+                            cumu_reward += pmc.get_reward(name)
+                        else:
+                            name, _, outcome = trans_mod[0]
+                            threshold = random()
+                            j = 0
+                            while j < len(outcome) and threshold > 0:
+                                threshold -= mysub(mysub(outcome[j][0], value), pmc.get_valuation())
+                                j += 1
+                            j -= 1
+                            realprob = outcome[j][0]
+                            prob *= mysub(realprob, pmc.get_valuation())/mysub(mysub(outcome[j][0], value), pmc.get_valuation())
+                            pmc.maj(outcome[j][1])
+                            cumu_reward += pmc.get_reward(name)
                 else:
-                    name, _, outcom = trans_mod[0]
-                    threshold = random()
-                    j = 0
-                    while j < len(outcom) and threshold > 0:
-                        threshold -= mysub(mysub(outcom[j][0], valu), pmc.get_valuation())
-                        j += 1
-                    j -= 1
-                    realprob = outcom[j][0]
-                    prob *= mysub(realprob, pmc.get_valuation())/mysub(mysub(outcom[j][0], valu), pmc.get_valuation())
-                    pmc.maj(outcom[j][1])
-                    cumu_reward += pmc.get_reward(name)
-            else:
-                numb_mod_deadlocked += 1
-            end = (numb_mod_deadlocked == len(pmc.modules))
+                    numb_mod_deadlocked += 1
+                end = (numb_mod_deadlocked == len(pmc.modules))
             # if end:
-# print("end at l = "+str(step))
-# print(cumu_reward)
+
+    elif pmc.get_pMCtype() == "ctmc":  # Simulation for ctmc
+        while step < length and not end:
+            step += 1
+            numb_mod_deadlocked = 0
+            for trans_mod in pmc.get_possible_transitions():
+                if trans_mod:
+                    time_unit = 1
+                    if len(trans_mod) > 1:
+                        print("race condition")
+
+                    else:
+                        print("hein ?")
+
+                else:
+                    numb_mod_deadlocked += 1
+                end = (numb_mod_deadlocked == len(pmc.modules))
+
+    # print("end at l = "+str(step))
+    # print(cumu_reward)
     return prob*cumu_reward
 
 
@@ -68,7 +89,7 @@ def simu(length, num_simu, pmc, valu=None):
     accu_reward = 0
     accu_var = 0
     for _ in range(0, num_simu):
-        # print("sim # = "+str(i))
+        # print("sim #"+str(i))
         random_var_y = sim(length, pmc, valu)
         accu_reward += random_var_y
         accu_var += random_var_y*random_var_y

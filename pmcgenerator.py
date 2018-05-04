@@ -114,8 +114,14 @@ def module_writing(file, pmc_type, nb_state, maximum_degree, parameters=None, ra
                             else:
                                 transition = float("{0:.3f}".format(random.random()))
                                 if proba_state + transition > 1:
-                                    transition = (1 - proba_state)
-                                proba_state += transition
+                                    if param_state:
+                                        transition = "1 - ("
+                                        for k in range(0, len(param_state)):
+                                            transition += param_state[k] + " + "
+                                        transition += str(proba_state) + ")"
+                                    else:
+                                        transition = (1 - proba_state)
+                                        proba_state += transition
                     else:
                         transition = float("{0:.3f}".format(random.random()))
                         if proba_state + transition > 1:
@@ -164,4 +170,4 @@ def pmc_constructor(nom, pmc_type, nb_state, maximum_degree, parameters=None, ra
 #     -If you want to generate a pMC, parameters should be send as a list of characters
 #     -If you want to generate a pMC, parameters should be send with a rate, if send without,
 #      a regular MC will be generated
-pmc_constructor("test", "dtmc", 5, 2)
+pmc_constructor("test", "dtmc", 10, 7, ['p'], 0.4)

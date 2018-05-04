@@ -76,7 +76,7 @@ def module_writing(file, pmc_type, nb_state, maximum_degree, parameters=None, ra
             reached_states = []
 
             if pmc_type == "ctmc":
-                for j in range(1, random.randint(2, maximum_degree + 1)):
+                for j in range(1, random.randint(1, maximum_degree + 1)):
                     transition_rate = random_rate(pmc_type, parameters, rate)
                     new_state = state_transition(reached_states, nb_state - 1)
                     trans = "\t"+"[] s="+str(i)+" -> "+str(transition_rate)+": (s' = "+str(new_state)+");\n"

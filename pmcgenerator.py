@@ -170,7 +170,6 @@ def pmc_constructor(nom, pmc_type, nb_state, maximum_degree, parameters=None, ra
 # -The pMC type is either "ctmc" or "dtmc", anything else will cause an error
 # -Don't add an extension to the file, the program does it automatically
 # -Parameters and rate are optionals:
-#     -If you want to generate a pMC, parameters should be send as a list of characters
 #     -If you want to generate a pMC, parameters should be send with a rate, if send without,
 #      a regular MC will be generated
 pmc_constructor("test", "ctmc", 10, 5, 3, 0.4)

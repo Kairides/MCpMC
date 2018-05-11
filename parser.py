@@ -3,7 +3,7 @@ from ply import lex,yacc
 from sympy.parsing.sympy_parser import parse_expr as rea
 from sympy import Function, Symbol
 from modules import PmcModules, Module
-#from memory_profiler import profile
+# from memory_profiler import profile
 
 
 # used to define multiple parameters in one go of the form param int p{0..N}; utilise apres p{x}
@@ -18,7 +18,7 @@ class my_func(Function):
             return Symbol(paramnameglob+str(exp))
 
 
-#@profile
+# @profile
 def myparse(filepath):
     # associate to string their expression
     dic = {}
@@ -29,7 +29,7 @@ def myparse(filepath):
     pmc = PmcModules()
     
     # The module that is currently built
-    curentMod = None
+    current_mod = None
 
 
 # ##############################@ LEXER #########################@
@@ -62,7 +62,6 @@ def myparse(filepath):
         'TRUE', 'FALSE',
     )
 
-
     def t_ccode_comment(t):
         r'//.*\n'
         pass
@@ -70,7 +69,6 @@ def myparse(filepath):
     def t_POINTPOINT(t):
         r'\.\.'
         return t
-
 
     def t_FLECHE(t):
         r'->'
@@ -116,7 +114,6 @@ def myparse(filepath):
         r"param"
         return t
 
-
     def t_CONST(t):
         r"const"
         return t
@@ -152,7 +149,6 @@ def myparse(filepath):
     def t_ENDINIT(t):
         r"endinit"
         return t
-
 
     def t_MODULE(t):
         r"module"
@@ -204,7 +200,7 @@ def myparse(filepath):
 
 
 # ignore space tab and new line
-    t_ignore  = ' \n\t'
+    t_ignore = ' \n\t'
 
 # error handeling in lexer
     def t_error(t):
@@ -225,8 +221,9 @@ def myparse(filepath):
                   ('left', 'PLUS', 'MINUS'),
                   ('left', 'MULT', 'DIV'),
                   ('right', 'NOT', 'UNMINUS'),
-                  ('right', 'LACCO', 'LPAR', 'LCROCHET'),
-                  ('left', 'RACCO', 'RPAR', 'RCROCHET'),
+                  ('right', 'LACCO'),
+                  ('left', 'LCROCHET', 'RCROCHET'),
+                  ('left', 'RACCO'),
                   ('left', 'DDOT'),
                   ('left', 'CONST', 'NAME'),
                   ('nonassoc', 'MODULE', 'REWARDS', 'ENDMODULE', 'ENDREWARDS'),
@@ -242,7 +239,6 @@ def myparse(filepath):
 
     def p_begining(p):
         'def : mdptype unfold'
-        # print(1)
 
     def p_unfold(p):
         '''unfold : declParamList
@@ -262,14 +258,14 @@ def myparse(filepath):
                   | initdef unfold
                   | formulas unfold'''
 
-
     def p_formulas(p):
         '''formulas : formula SC formulas
-                    | formula'''
+                    | formula SC'''
 
     def p_formula(p):
         'formula : FORMULA NAME EQUAL funexp'
         t, e = p[4]
+        print('formula : ', e)
         dic[p[2]] = rea(e, dic)
 
     # type : MDP
@@ -277,10 +273,12 @@ def myparse(filepath):
         '''mdptype : MDP
                    | CTMC
                    | DTMC'''
+
+        e = p[1]
+        pmc.add_pMCtype(e)
         if p[1] not in ("dtmc", "probabilistic", "ctmc"):
             print(p[1])
             print(" WARNING !! only probabilistic model are supported yet")
-
 
     # list of PARAMETERS separted by a semicolon
     def p_decl_param_list(p):
@@ -303,8 +301,6 @@ def myparse(filepath):
         t2, e2 = p[7]
         for i in range(rea(e1, dic), rea(e2, dic)+1):
             pmc.add_parameter(Symbol(p[3]+str(i)))
-    
-    
 
     def p_type(p):
         '''type : empty
@@ -314,8 +310,12 @@ def myparse(filepath):
                 | DOUBLE'''
         if p[1] == "bool":
             p[0] = "bool"
-        else:
+        elif p[1] == "int":
             p[0] = "int"
+        elif p[1] == "double" or p[1] == "float":
+            p[0] = "double"
+        else:
+            raise Exception("Unknown type")
 
     # list of CONSTANTS separated by a semicolon
     def p_decl_const_listl(p):
@@ -326,23 +326,22 @@ def myparse(filepath):
         '''declConst : CONST type NAME
                      | CONST type NAME  EQUAL funexp'''
 
-        if len(p) > 5:
+        if len(p) >= 5:
             t, e = p[5]
-            if t == p[2]:
+            if t == p[2] or (p[2] == "int" and t == "double") or (p[2] == "double" and t == "int"):
                 dic[p[3]] = rea(e, dic)
                 type[p[3]] = p[2]
             else:
-                raise Exception("invalid type cons decl : "+p[3]+" "+t+" "+p[2])
+                raise Exception("invalid type const decl : "+p[3]+" "+t+" "+p[2])
         else:
-            dic[p[3]] = rea("default", dic)
+            dic[p[3]] = rea(p[3], dic)
             type[p[3]] = p[2]
-
+            pmc.add_parameter(dic[p[3]])
 
     # list of GLOBAL VARIABLES separated by a semicolon
     def p_globall_list(p):
         '''declGlobalList : declGlobal SC declGlobalList
                           | declGlobal SC'''
-
 
     def p_globall(p):
         '''declGlobal : GLOBALL NAME DDOT LCROCHET funexp POINTPOINT funexp RCROCHET
@@ -364,11 +363,10 @@ def myparse(filepath):
             type[p[2]] = "bool"
             pmc.add_global_variable(dic[p[2]], rea("true", dic), rea("false", dic))
 
-
     # list of MODULES
     def p_module_list(p):
-        '''moduleList : MODULE module endmodule moduleList
-                      | MODULE module endmodule'''
+        '''moduleList : MODULE module endmodule
+                      | MODULE module endmodule moduleList'''
 
     # For a module either
     # 1 define a new module
@@ -377,17 +375,17 @@ def myparse(filepath):
         '''module : modName stateList transList
                   | reModName  LCROCHET listIdState RCROCHET'''
 
-
     def p_new_mod(p):
         'modName : NAME'
-        nonlocal curentMod
-        curentMod = Module(p[1])
+        nonlocal current_mod
+        current_mod = Module(p[1])
+        print("    module: " + p[1])
 
     def p_renewmod(p):
         'reModName : NAME EQUAL NAME'
-        nonlocal curentMod
+        nonlocal current_mod
         mod = pmc.get_module(p[3])
-        curentMod = mod.copy(p[1])
+        current_mod = mod.copy(p[1])
 
     # renaming a module
     def p_list_id_state(p):
@@ -396,65 +394,75 @@ def myparse(filepath):
         dic[p[3]] = rea(p[3], dic)
         type[p[3]] = type[p[1]]
         try:
-            curentMod.replace(dic[p[1]], dic[p[3]])
+            current_mod.replace(dic[p[1]], dic[p[3]])
         except:
-            curentMod.replace(p[1], p[3])
+            current_mod.replace(p[1], p[3])
 
     # when finished add the created module to pmc
     def p_endmodule(p):
         'endmodule : ENDMODULE'
-        nonlocal curentMod
-        pmc.add_module(curentMod)
-        curentMod = None
+        print("     +1 module")
+        nonlocal current_mod
+        pmc.add_module(current_mod)
+        current_mod = None
 
     # list of declarition of states
     def p_state_list(p):
         '''stateList : stateDecl SC stateList
-                     | empty'''
-
+                     | stateDecl SC'''
 
     # state declaration with our without initial value
     def p_statedecl(p):
         '''stateDecl : NAME DDOT LCROCHET funexp POINTPOINT funexp RCROCHET
                      | NAME DDOT LCROCHET funexp POINTPOINT funexp RCROCHET INIT funexp
+                     | NAME DDOT BOOL INIT funexp
                      | NAME DDOT BOOL'''
+
         dic[p[1]] = rea(p[1], dic)
         if len(p) > 8:
             _, e1 = p[4]
-            _, e2 = p[5]
-            _, e3 = p[9]
-            curentMod.add_state(dic[p[1]], rea(e1, dic), rea(e2, dic), rea(e3, dic))
-            type[p[1]] = "int"
-        elif len(p) > 5:
-            type[p[1]] = "int"
-            _, e1 = p[4]
             _, e2 = p[6]
-            curentMod.add_state(dic[p[1]], rea(e1, dic), rea(e2, dic))
+            _, e3 = p[9]
+            type[p[1]] = "int"
+            current_mod.add_state(dic[p[1]], rea(e1, dic), rea(e2, dic), rea(e3, dic))
+
+        elif len(p) == 8:
+            _, e1 = p[4]
+            t, e2 = p[6]
+            type[p[1]] = t
+            current_mod.add_state(dic[p[1]], rea(e1, dic), rea(e2, dic), rea(e1, dic))
+
+        elif len(p) > 4 and p[4] == 'INIT':
+            t, e = p[5]
+            if t == "bool":
+                current_mod.add_state(dic[p[1]], True, e)
         else:
             type[p[1]] = "bool"
-            curentMod.add_state(dic[p[1]], True, False)
+            current_mod.add_state(dic[p[1]], True, False)
 
     # list of transition
     def p_trans_list(p):
-        '''transList : trans SC transList
+        '''transList : trans transList
                      | empty'''
 
-    # transition without or with name
+    # transition with or without a name
     def p_trans(p):
-        '''trans : LCROCHET RCROCHET funexp FLECHE updatesProb
-                 | LCROCHET NAME RCROCHET funexp FLECHE updatesProb'''
-        if len(p) == 6:
+        '''trans : LCROCHET RCROCHET funexp FLECHE updatesProb SC
+                 | LCROCHET NAME RCROCHET funexp FLECHE updatesProb SC'''
+        if len(p) <= 7:
             t, e = p[3]
-            if t == "bool":
-                curentMod.add_transition("", rea(e, dic), p[5])
+            if t == "bool" or t == "default":
+                current_mod.add_transition("", rea(e, dic), p[5])
+                print("        +1 transition anonyme")
             else:
                 raise Exception('Not bool in cond'+e)
         else:
-            t,e = p[4]
-            if t == "bool":
-                curentMod.add_transition(p[2], rea(e, dic), p[6])
+            t, e = p[4]
+            if t == "bool" or t == "default":
+                current_mod.add_transition(p[2], rea(e, dic), p[6])
+                print("        +1 transition")
             else:
-                raise Exception('Not bool in cond'+e)
+                raise Exception("Not bool in cond", e)
 
     def p_updates_prob(p):
         '''updatesProb : funexp DDOT updates PLUS updatesProb
@@ -464,8 +472,11 @@ def myparse(filepath):
             _, e = p[1]
             p[0] = p[5]+[[rea(e, dic), p[3]]]
         elif len(p) > 3:
-            _, e = p[1]
-            p[0] = [[rea(e, dic), p[3]]]
+            t, e = p[1]
+            if e in dic:
+                p[0] = [[dic[e], p[3]]]
+            else:
+                p[0] = [[rea(e, dic), p[3]]]
         else:
             p[0] = [[1, p[1]]]
 
@@ -484,7 +495,7 @@ def myparse(filepath):
     def p_upd(p):
         'upd : LPAR NAME NEW EQUAL funexp RPAR'
         _, e = p[5]
-        p[0] = {rea(p[2], dic):rea(e, dic)}
+        p[0] = {rea(p[2], dic): rea(e, dic)}
 
     # list of LABELS separated by a semicolon
     def p_label_list(p):
@@ -501,13 +512,15 @@ def myparse(filepath):
     # REWARDS
     def p_rewards(p):
         '''rewards : REWARDS rew ENDREWARDS rewards
-                   | REWARDS rew ENDREWARDS'''
+                   | REWARDS rew ENDREWARDS
+                   | REWARDS QUOTE NAME QUOTE rew ENDREWARDS rewards
+                   | REWARDS QUOTE NAME QUOTE rew ENDREWARDS'''
 
     def p_rew(p):
-        '''rew : QUOTE NAME QUOTE funexp DDOT funexp SC rew
+        '''rew : funexp DDOT funexp SC rew
                | LCROCHET NAME RCROCHET funexp DDOT funexp SC rew
                | LCROCHET RCROCHET funexp DDOT funexp SC rew
-               | QUOTE NAME QUOTE funexp DDOT funexp SC
+               | funexp DDOT funexp SC
                | LCROCHET NAME RCROCHET funexp DDOT funexp SC
                | LCROCHET RCROCHET funexp DDOT funexp SC'''
         if p[1] == "[":
@@ -525,6 +538,10 @@ def myparse(filepath):
                     pmc.add_reward('', rea(e, dic), rea(er, dic))
                 else:
                     raise Exception("Invalid type in condition of reward "+p[2])
+        else:
+            _, e = p[1]
+            _, er = p[3]
+            pmc.add_reward('', rea(e, dic), rea(er, dic))
 
     # init def:
     def p_initdef(p):
@@ -538,24 +555,46 @@ def myparse(filepath):
         'ainit : NAME EQUAL funexp'
         t1, e = p[3]
         t2 = type[p[1]]
-        if t1 == t2:
+        if t1 == t2 or ((t1 == "int" or t1 == "float" or t1 == "double") and (t2 == "int" or t2 == "float" or t2 == "double")):
             pmc.set_init_value(rea(p[1], dic), rea(e, dic))
         else:
             raise Exception("bad type in init :"+e+" = "+p[1])
 
-    # EXPRESSION AS FUNCTION (with parameters and CONSTANTs
+    # EXPRESSION AS FUNCTION (with parameters and CONSTANTS
 
     def p_funexpbinop(p):
         '''funexp : funexp PLUS funexp
                   | funexp MINUS funexp
                   | funexp DIV funexp
                   | funexp MULT funexp'''
+
         t1, e1 = p[1]
         t2, e2 = p[3]
-        if t1 == t2 or t1 == "default" or t2 == "default":
-            p[0] = ["int", "(%s)"%(e1+p[2]+e2)]
+
+        if e1 in dic:
+            if e2 in dic:
+                if t1 == t2 or "default" in (t1, t2) or ((t1 == "int" or t1 == "float" or t1 == "double") and (t2 == "int" or t2 == "float" or t2 == "double")):
+                    p[0] = ["double", "(%s)" % (str(dic[e1]) + p[2] + str(dic[e2]))]
+                else:
+                    raise Exception("Incompatible type in : " + e1 + p[2] + e2)
+            else:
+                if t1 == t2 or t1 == "default" or t2 == "default" or ((t1 == "int" or t1 == "float" or t1 == "double") and (t2 == "int" or t2 == "float" or t2 == "double")):
+                    p[0] = ["double", "(%s)" % (str(dic[e1]) + p[2] + e2)]
+                else:
+                    raise Exception("Incompatible type in : " + e1 + p[2] + e2)
         else:
-            raise Exception("Incompatible type in : "+e1+p[2]+e2)
+            if e2 in dic:
+                if type[dic[e2]] == "default":
+                    p[0] = ["double", "(%s)" % (e1 + p[2] + str(e2))]
+                elif t1 == t2 or (t1 == "int" or t1 == "float" or t1 == "double" or t1 == "default") and (t2 == "int" or t2 == "float" or t2 == "double" or t2 == "default"):
+                    p[0] = ["double", "(%s)" % (e1 + p[2] + str(dic[e2]))]
+                else:
+                    raise Exception("Incompatible type in : " + e1 + p[2] + e2)
+            else:
+                if t1 == t2 or t1 == "default" or t2 == "default" or ((t1 == "int" or t1 == "float" or t1 == "double") and (t2 == "int" or t2 == "float" or t2 == "double")):
+                    p[0] = ["double", "(%s)" % (e1 + p[2] + e2)]
+                else:
+                    raise Exception("Incompatible type in : " + e1 + p[2] + e2)
 
     def p_funexpbinopcomp(p):
         '''funexp : funexp GEQ funexp
@@ -564,7 +603,7 @@ def myparse(filepath):
                   | funexp LEQ funexp'''
         t1, e1 = p[1]
         t2, e2 = p[3]
-        if t1 == t2 or t1 == "default" or t2 == "default":
+        if t1 == t2 or t1 == "default" or t2 == "default" or ((t1 == "int" or t1 == "float" or t1 == "double") and (t2 == "int" or t2 == "float" or t2 == "double")):
             p[0] = ["bool", "(%s)"%(e1+p[2]+e2)]
         else:
             raise Exception("Incompatible type in : "+e1+p[2]+e2)
@@ -573,10 +612,13 @@ def myparse(filepath):
         '''funexp : funexp EQUAL funexp'''
         t1, e1 = p[1]
         t2, e2 = p[3]
+
         if (t1 == t2 and (t1 == "bool" or t1 == "default")) or ("default" in (t1, t2) and "bool" in (t1, t2)):
-            p[0] = ["bool", "(%s&%s)"%(e1, e2)]
+            p[0] = ["bool", "(%s&%s)"% (e1, e2)]
         elif t1 == t2 or t1 == "default" or t2 == "default":
-            p[0] = ["bool", "((%s >= 0)&(%s <= 0))"%(e1+"-"+e2, e1+"-"+e2)]
+            p[0] = ["bool", "((%s >= 0)&(%s <= 0))"% (e1+"-"+e2, e1+"-"+e2)]
+        elif (t1 == "int" or t1 == "float" or t1 == "double") and (t2 == "int" or t2 == "float" or t2 == "double"):
+            p[0] = ["bool", "((%s >= 0)&(%s <= 0))" % (e1 + "-" + e2, e1 + "-" + e2)]
         else:
             raise Exception("Incompatible type in : "+e1+p[2]+e2)
 
@@ -586,7 +628,7 @@ def myparse(filepath):
         t1, e1 = p[1]
         t2, e2 = p[3]
         if t1 == t2 or t1 == "default" or t2 == "default":
-            p[0] = ["bool", "(%s)"%(e1+p[2]+e2)]
+            p[0] = ["bool", "(%s)" % (e1+p[2]+e2)]
         else:
             raise Exception("Incompatible type in : "+e1+p[2]+e2)
 
@@ -632,20 +674,17 @@ def myparse(filepath):
         '''funexp : NAME LPAR funexp RPAR
                   | NAME LPAR funexp VIRGULE funexp RPAR'''
 
-        if p[4] == ')':
+        if len(p) <= 5:
             t, e = p[3]
-            p[0] = [t, "%s(%s)" % (p[1], e)]
+            p[0] = ["int", "%s(%s)" % (p[1], e)]
 
-        elif p[4] == ',':
+        else:
             _, e1 = p[3]
             _, e2 = p[5]
             p[0] = ["int", "%s(%s,%s)" % (p[1], e1, e2)]
 
-        else:
-            print("bisou")
 
-
-# handeling error in parsing
+# handling error in parsing
     def p_error(p):
         print("Syntax error in input!")
         print(p)

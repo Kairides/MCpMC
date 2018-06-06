@@ -1,11 +1,15 @@
 import random
 
+# TODO: Créer un affichage permetant de choisir le nom du fichier, le type de MC, le nombre d'état, le nombre moyen de transition, le nombre de parametre et le taux de parametrage
+
 
 # Function that chooses the next state for a transition
 def state_transition(reached_states, nb_state):
-    new_state = random.randint(1, nb_state)
+    new_state = random.randint(0, nb_state - 1)
     while reached_states.count(new_state) >= 1:
-        new_state = random.randint(1, nb_state)
+        print("il est deja dedans", new_state)
+        new_state = random.randint(0, nb_state - 1)
+        print("nouvel etat choisit", new_state)
 
     return new_state
 
@@ -15,7 +19,7 @@ def random_rate(pmc_type, parameters=None, rate=None):
         if parameters and rate:
             val = random.random()
             if val <= rate:
-                index = random.randint(0, parameters)
+                index = random.randint(1, parameters)
                 return "p" + str(index)
 
             else:
@@ -106,7 +110,8 @@ def module_writing(file, pmc_type, nb_state, maximum_degree, parameters=None, ra
 
                     # If there is parameters and a rate, parameters can be used for transitions
                     if parameters and rate:
-                        new_state = state_transition(reached_states, nb_state - 1)
+                        new_state = state_transition(reached_states, nb_state)
+                        reached_states.append(new_state)
                         # If the total probability is not 1 but the last transition is reached
                         # the resulting probability will be:
                         # "1 -(the parameters used + the total probability)" as a string
@@ -164,8 +169,6 @@ def module_writing(file, pmc_type, nb_state, maximum_degree, parameters=None, ra
 
         file.write("endmodule \n \n")
 
-        # Initial state
-        file.write("init \n \t" + "s = 0 \n" + "endinit")
     return file
 
 
@@ -194,4 +197,4 @@ def pmc_constructor(nom, pmc_type, nb_state, maximum_degree, parameters=None, ra
 # -Parameters and rate are optionals:
 #     -If you want to generate a pMC, parameters should be send with a rate, if send without,
 #      a regular MC will be generated
-pmc_constructor("test", "dtmc", 10, 5, 3, 0.3)
+pmc_constructor("exemple_rapport", "dtmc", 4, 3, 2, 0.5)

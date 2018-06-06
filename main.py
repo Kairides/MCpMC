@@ -6,7 +6,6 @@ from modules import mysub
 from simumodules import simu
 import time
 # from memory_profiler import profile
-# import re
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import numpy as np
@@ -40,24 +39,24 @@ def estim_esp_var(length_of_run, num_of_run, pmc, value=None):
 
 def toy():
 
-    file = 'example/toy.pm'  # Selection du fichier toy.pm dans le dossier example
-
     pmc = parsing_aux("example/toy.pm")
 
-    num_of_run = 10000  # Nombre de tours
+    num_of_run = 1000  # Nombre de tours
 
-    length_of_run = 100  # Longueur des tours
+    length_of_run = 10000  # Longueur des tours
 
     estimated_reward, estimated_variance = estim_esp_var(length_of_run, num_of_run, pmc)
+
+    parameters = list(pmc.param)
 
     fig = plt.figure()  # Plot de la figure
 
     ax = Axes3D(fig)
     # ax = fig.add_subplot(111, projection='3d')  # Ajout d'un affichage dans la figure
 
-    f = sympy.lambdify(pmc.param, estimated_reward)
+    f = sympy.lambdify(parameters, estimated_reward)
     fv = np.vectorize(f)
-    v = sympy.lambdify(pmc.param, estimated_variance)
+    v = sympy.lambdify(parameters, estimated_variance)
     vv = np.vectorize(v)
     x = np.arange(0.05, 0.95, 0.01)
     y = np.arange(0.05, 0.95, 0.01)
@@ -79,18 +78,20 @@ def toym():
 
     pmc = parsing_aux("example/toymul.pm")
 
-    num_of_run = 10000
-    length_of_run = 100
+    num_of_run = 1000
+    length_of_run = 10000
 
     estimated_reward, estimated_variance = estim_esp_var(length_of_run, num_of_run, pmc)
 
-    def random_val1(q, e):
+    print(estimated_reward, estimated_variance)
+
+    def random_val1(q, val):
         random_valuation = dict()
         random_valuation[pmc.param[0]] = q
         for i in range(1, len(pmc.param)):
             param = pmc.param[i]
             random_valuation[param] = random()*(1-q)
-        return e.subs(random_valuation)
+        return val.subs(random_valuation)
     random_val = np.vectorize(random_val1)
     x = np.arange(0.05, 0.95, 0.05)
     y = random_val(x, estimated_reward)
@@ -149,21 +150,23 @@ def nand2():
 
 def zeroconf():
 
-    pmc = parsing_aux("exaple/zeroconf.pm")
+    pmc = parsing_aux("example/zeroconf.pm")
 
-    num_of_run = 10000
+    num_of_run = 1000
     length_of_run = 500
 
     estimated_reward, estimated_variance = estim_esp_var(length_of_run, num_of_run, pmc)
     # ,{pmc.param[0]:0.3,pmc.param[1]:0.3})
 
+    parameters = list(pmc.param)
+
     fig = plt.figure()
 
     ax = Axes3D(fig)
     # ax = fig.add_subplot(111, projection='3d')
-    f = sympy.lambdify(pmc.param, estimated_reward)
+    f = sympy.lambdify(parameters, estimated_reward)
     fv = np.vectorize(f)
-    v = sympy.lambdify(pmc.param, estimated_variance)
+    v = sympy.lambdify(parameters, estimated_variance)
     vv = np.vectorize(v)
     x = np.arange(0.15, 0.55, 0.005)
     y = np.arange(0.15, 0.55, 0.005)
@@ -171,8 +174,8 @@ def zeroconf():
     big_z = fv(big_x, big_y)
     big_c = 2*1.96*vv(big_x, big_y)/sqrt(num_of_run)
     plot = ax.scatter(big_x, big_y, big_z, c=big_c.ravel())
-    ax.set_xlabel(str(pmc.param[0]))
-    ax.set_ylabel(str(pmc.param[1]))
+    ax.set_xlabel(str(parameters[0]))
+    ax.set_ylabel(str(parameters[1]))
     ax.set_zlabel('Expected value')
     cb = plt.colorbar(plot)
     cb.set_label("CI width")
@@ -180,13 +183,17 @@ def zeroconf():
     plt.show()
 
 
+# Test function for crowds.pm
 def crowd():
 
+    # Parsing file
     pmc = parsing_aux("example/crowds.pm")
 
-    num_of_run = 10000
-    length_of_run = 1000000
+    # number of runs and their length
+    num_of_run = 1000
+    length_of_run = 10000
 
+    # Mean and variance
     estimated_reward, estimated_variance = estim_esp_var(length_of_run, num_of_run, pmc)
     # ,{pmc.param[0]:0.8,pmc.param[1]:1/6})
 
@@ -221,7 +228,7 @@ def crowd():
 
 def main():
 
-    file = 'example/nand.pm'   # Selection du fichier nand.pmdans le dossier example
+    file = 'example/nand.pm'   # Selection du fichier nand.pm dans le dossier example
     if len(argv) > 1:
         file = argv[1]
     pmc = myparse(file)
@@ -244,4 +251,114 @@ def main():
     print(3.92/sqrt(num_of_run)*mysub(estimated_variance, random_valuation))
 
 
+def embedded():
+
+    pmc = parsing_aux("example/embedded.sm")
+
+    num_of_run = 100
+    length_of_run = 1000
+
+    estimated_reward, estimated_variance = estim_esp_var(length_of_run, num_of_run, pmc)
+    print(estimated_reward, estimated_variance)
+
+
+def polling():
+
+    pmc = parsing_aux("example/polling5.sm")
+
+    num_of_run = 100
+    length_of_run = 1000
+
+    estimated_reward, estimated_variance = estim_esp_var(length_of_run, num_of_run, pmc)
+    print(estimated_reward, estimated_variance)
+
+
+def fms():
+
+    pmc = parsing_aux("example/fms.sm")
+
+    num_of_run = 100
+    length_of_run = 1000
+
+    estimated_reward, estimated_variance = estim_esp_var(length_of_run, num_of_run, pmc)
+    print(estimated_reward, estimated_variance)
+
+
+def mapk():
+
+    pmc = parsing_aux("example/mapk_cascade.sm")
+    num_of_run = 100
+    length_of_run = 1000
+
+    estimated_reward, estimated_variance = estim_esp_var(length_of_run, num_of_run, pmc)
+
+    print(estimated_reward, estimated_variance)
+
+
+def cluster():
+
+    pmc = parsing_aux("example/cluster.sm")
+    num_of_run = 100
+    length_of_run = 1000
+
+    estimated_reward, estimated_variance = estim_esp_var(length_of_run, num_of_run, pmc)
+
+    print(estimated_reward, estimated_variance)
+
+
+def tandem():
+    pmc = parsing_aux("example/tandem.sm")
+    num_of_run = 100
+    length_of_run = 1000
+
+    estimated_reward, estimated_variance = estim_esp_var(length_of_run, num_of_run, pmc)
+
+    print(estimated_reward, estimated_variance)
+
+
+def test_sm():
+    pmc = parsing_aux("test.sm")
+    num_of_run = 100
+    length_of_run = 1000
+
+    estimated_reward, estimated_variance = estim_esp_var(length_of_run, num_of_run, pmc)
+
+    print(estimated_reward, estimated_variance)
+
+
+def test_pm():
+    pmc = parsing_aux("test.pm")
+    num_of_run = 100
+    length_of_run = 1000
+
+    estimated_reward, estimated_variance = estim_esp_var(length_of_run, num_of_run, pmc)
+
+    print(estimated_reward, estimated_variance)
+
+
+# parsing_aux("example/polling5.sm")
+# parsing_aux("example/fms.sm")
+# parsing_aux("example/tandem.sm")
+# parsing_aux("example/cluster.sm")
+# parsing_aux("example/embedded.sm")
+# parsing_aux("example/toymul.pm")
+# parsing_aux("example/crowds.pm")
+# parsing_aux("example/zeroconf.pm")
+# parsing_aux("example/crowds2.pm")
+# parsing_aux("example/mapk_cascade.sm")
+# parsing_aux("test.pm")
+# parsing_aux("test.sm")
+
 toym()
+# crowd()
+# zeroconf()
+# toy()
+# nand2()
+# embedded()
+# polling()
+# fms()
+# mapk()
+# cluster()
+# tandem()
+# test_sm()
+# test_pm()

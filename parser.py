@@ -3,6 +3,8 @@ from ply import lex,yacc
 from sympy.parsing.sympy_parser import parse_expr as rea
 from sympy import Function, Symbol
 from modules import PmcModules, Module
+import re
+from sympy import symbols
 # from memory_profiler import profile
 
 
@@ -265,7 +267,6 @@ def myparse(filepath):
     def p_formula(p):
         'formula : FORMULA NAME EQUAL funexp'
         t, e = p[4]
-        print('formula : ', e)
         dic[p[2]] = rea(e, dic)
 
     # type : MDP
@@ -275,7 +276,7 @@ def myparse(filepath):
                    | DTMC'''
 
         e = p[1]
-        pmc.add_pMCtype(e)
+        pmc.add_pmc_type(e)
         if p[1] not in ("dtmc", "probabilistic", "ctmc"):
             print(p[1])
             print(" WARNING !! only probabilistic model are supported yet")
@@ -288,14 +289,16 @@ def myparse(filepath):
     def p_decl_paraml(p):
         '''declParam : PARAM type NAME DDOT LCROCHET funexp POINTPOINT funexp RCROCHET
                      | PARAM type NAME'''
-        dic[p[3]] = rea(p[3], dic)
         type[p[3]] = "int"
-        pmc.add_parameter(dic[p[3]])
+        pmc.value_param[p[3]] = [p[2], None]
+        dic[p[3]] = rea(p[3], dic)
+        pmc.add_parameter(p[3])
     
     def p_decl_param_multiple(p):
         'declParam : PARAM type NAME LACCO funexp POINTPOINT funexp RACCO'
         global paramnameglob
         paramnameglob = p[3]
+        pmc.value_param[p[3]] = [p[2], None]
         dic[p[3]] = my_func
         t1, e1 = p[5]
         t2, e2 = p[7]
@@ -324,18 +327,29 @@ def myparse(filepath):
 
     def p_decl_constl(p):
         '''declConst : CONST type NAME
-                     | CONST type NAME  EQUAL funexp'''
+                     | CONST type NAME EQUAL funexp
+                     | CONST type NAME LACCO funexp POINTPOINT funexp RACCO'''
+        if len(p) >= 8:
+            pmc.value_param[p[3]] = [p[2], None]
+            dic[p[3]] = my_func
+            t1, e1 = p[5]
+            t2, e2 = p[7]
+            for i in range(rea(e1, dic), rea(e2, dic)+1):
+                name = p[3] + str(i)
+                pmc.value_param[name] = (p[2], None)
+                pmc.add_parameter(Symbol(p[3]+str(i)))
 
-        if len(p) >= 5:
+        elif len(p) >= 5:
             t, e = p[5]
             if t == p[2] or (p[2] == "int" and t == "double") or (p[2] == "double" and t == "int"):
-                dic[p[3]] = rea(e, dic)
                 type[p[3]] = p[2]
+                dic[p[3]] = rea(e, dic)
             else:
                 raise Exception("invalid type const decl : "+p[3]+" "+t+" "+p[2])
         else:
-            dic[p[3]] = rea(p[3], dic)
             type[p[3]] = p[2]
+            pmc.value_param[p[3]] = (p[2], None)
+            dic[p[3]] = rea(p[3], dic)
             pmc.add_parameter(dic[p[3]])
 
     # list of GLOBAL VARIABLES separated by a semicolon
@@ -358,7 +372,7 @@ def myparse(filepath):
             t2, e2 = p[7]
             t3, e3 = p[10]
             type[p[2]] = "int"
-            pmc.add_global_variable(dic[p[2]], rea(e1, dic), rea(e2, dic), rea(e3, dic))
+            pmc.add_global_variable(dic[p[2]], rea(e1, dic), rea(e2, dic))
         else:
             type[p[2]] = "bool"
             pmc.add_global_variable(dic[p[2]], rea("true", dic), rea("false", dic))
@@ -379,7 +393,6 @@ def myparse(filepath):
         'modName : NAME'
         nonlocal current_mod
         current_mod = Module(p[1])
-        print("    module: " + p[1])
 
     def p_renewmod(p):
         'reModName : NAME EQUAL NAME'
@@ -401,7 +414,6 @@ def myparse(filepath):
     # when finished add the created module to pmc
     def p_endmodule(p):
         'endmodule : ENDMODULE'
-        print("     +1 module")
         nonlocal current_mod
         pmc.add_module(current_mod)
         current_mod = None
@@ -427,6 +439,7 @@ def myparse(filepath):
             current_mod.add_state(dic[p[1]], rea(e1, dic), rea(e2, dic), rea(e3, dic))
 
         elif len(p) == 8:
+            print(p[1])
             _, e1 = p[4]
             t, e2 = p[6]
             type[p[1]] = t
@@ -449,20 +462,81 @@ def myparse(filepath):
     def p_trans(p):
         '''trans : LCROCHET RCROCHET funexp FLECHE updatesProb SC
                  | LCROCHET NAME RCROCHET funexp FLECHE updatesProb SC'''
+
+        # Generation of an equation system to help determine the value of each parameters
+
         if len(p) <= 7:
+
             t, e = p[3]
-            if t == "bool" or t == "default":
-                current_mod.add_transition("", rea(e, dic), p[5])
-                print("        +1 transition anonyme")
-            else:
-                raise Exception('Not bool in cond'+e)
+            if pmc.expression == "":
+
+                pmc.expression = e
+                pmc.equation_system[e] = [0, {}, []]
+            elif pmc.expression != e:
+
+                pmc.expression = e
+                pmc.equation_system[e] = [0, {}, []]
+
+            for i in range(len(p[5])):
+                pt = p[5][i][0]
+                if t == "bool" or t == "default":
+                    current_mod.add_transition("", rea(e, dic), p[5][i])
+                    if str(pt).isdigit():
+                        pmc.equation_system[e][0] = 1
+                        # print("+1 num :", 1)
+                    else:
+                        copy_point = str(pt).split('.')
+                        copy_slash = str(pt).split('/')
+                        if (copy_point[0].isdigit() and copy_point[1].isdigit()) or (copy_slash[0].isdigit() and copy_slash[1].isdigit()):
+                            pmc.equation_system[e][0] += pt
+                            # print("+1 num :", pt)
+                        elif re.compile(r'([0-9]*[a-zA-Z]*)*').fullmatch(str(pt)):
+                            if not(pt in pmc.equation_system[e][1]):
+                                pmc.equation_system[e][1][pt] = 1
+                            else:
+                                pmc.equation_system[e][1][pt] += 1
+                            # print("+1 param")
+                        else:
+                            pmc.equation_system[e][2] += [pt]
+                            # print("+1 equation")
+                else:
+                    raise Exception('Not bool in cond'+e)
         else:
             t, e = p[4]
-            if t == "bool" or t == "default":
-                current_mod.add_transition(p[2], rea(e, dic), p[6])
-                print("        +1 transition")
-            else:
-                raise Exception("Not bool in cond", e)
+            if pmc.expression == "":
+                pmc.expression = e
+                pmc.equation_system[e] = [0, {}, []]
+            elif pmc.expression != e:
+
+                pmc.expression = e
+                pmc.equation_system[e] = [0, {}, []]
+
+            for i in range(len(p[6])):
+                pt = p[6][i][0]
+                if t == "bool" or t == "default":
+                    current_mod.add_transition("", rea(e, dic), p[5])
+                    if str(pt).isdigit():
+                        pmc.equation_system[e][0] = 1
+                        # print("+1 num :", 1)
+                    else:
+                        copy_point = str(pt).split('.')
+                        if copy_point[0].isdigit() and copy_point[1].isdigit():
+                            pmc.equation_system[e][0] += pt
+                            # print("+1 num :", pt)
+                        elif re.compile(r'([0-9]*[a-zA-Z]*)*').fullmatch(str(pt)):
+                            if not(pt in pmc.equation_system[e][1]):
+                                pmc.equation_system[e][1][pt] = 1
+                            else:
+                                pmc.equation_system[e][1][pt] += 1
+                            # print("+1 param")
+                        else:
+                            pmc.equation_system[e][2] += [pt]
+                            # print("+1 equation")
+                else:
+                    raise Exception('Not bool in cond'+e)
+
+        for trans in range(len(current_mod.trans)):
+            print(current_mod.trans[trans])
 
     def p_updates_prob(p):
         '''updatesProb : funexp DDOT updates PLUS updatesProb
@@ -573,12 +647,15 @@ def myparse(filepath):
 
         if e1 in dic:
             if e2 in dic:
-                if t1 == t2 or "default" in (t1, t2) or ((t1 == "int" or t1 == "float" or t1 == "double") and (t2 == "int" or t2 == "float" or t2 == "double")):
+                if t1 == t2 or "default" in (t1, t2) or ((t1 == "int" or t1 == "float" or t1 == "double")
+                                                         and (t2 == "int" or t2 == "float" or t2 == "double")):
                     p[0] = ["double", "(%s)" % (str(dic[e1]) + p[2] + str(dic[e2]))]
                 else:
                     raise Exception("Incompatible type in : " + e1 + p[2] + e2)
             else:
-                if t1 == t2 or t1 == "default" or t2 == "default" or ((t1 == "int" or t1 == "float" or t1 == "double") and (t2 == "int" or t2 == "float" or t2 == "double")):
+                if t1 == t2 or t1 == "default" or t2 == "default" \
+                        or ((t1 == "int" or t1 == "float" or t1 == "double")
+                            and (t2 == "int" or t2 == "float" or t2 == "double")):
                     p[0] = ["double", "(%s)" % (str(dic[e1]) + p[2] + e2)]
                 else:
                     raise Exception("Incompatible type in : " + e1 + p[2] + e2)
@@ -586,12 +663,15 @@ def myparse(filepath):
             if e2 in dic:
                 if type[dic[e2]] == "default":
                     p[0] = ["double", "(%s)" % (e1 + p[2] + str(e2))]
-                elif t1 == t2 or (t1 == "int" or t1 == "float" or t1 == "double" or t1 == "default") and (t2 == "int" or t2 == "float" or t2 == "double" or t2 == "default"):
+                elif t1 == t2 or (t1 == "int" or t1 == "float" or t1 == "double" or t1 == "default") \
+                        and (t2 == "int" or t2 == "float" or t2 == "double" or t2 == "default"):
                     p[0] = ["double", "(%s)" % (e1 + p[2] + str(dic[e2]))]
                 else:
                     raise Exception("Incompatible type in : " + e1 + p[2] + e2)
             else:
-                if t1 == t2 or t1 == "default" or t2 == "default" or ((t1 == "int" or t1 == "float" or t1 == "double") and (t2 == "int" or t2 == "float" or t2 == "double")):
+                if t1 == t2 or t1 == "default" or t2 == "default" \
+                        or ((t1 == "int" or t1 == "float" or t1 == "double")
+                            and (t2 == "int" or t2 == "float" or t2 == "double")):
                     p[0] = ["double", "(%s)" % (e1 + p[2] + e2)]
                 else:
                     raise Exception("Incompatible type in : " + e1 + p[2] + e2)
@@ -668,7 +748,16 @@ def myparse(filepath):
     def p_funexp_param(p):
         'funexp : NAME LACCO funexp RACCO'
         _, e = p[3]
-        p[0] = ["int", "%s(%s)" % (p[1], e)]
+        val = 0
+        for k in current_mod.get_states():
+            print(k, e)
+            if str(k) == str(e):
+                print("touvé")
+                val = current_mod.current_value_state[symbols(e)]
+            else:
+                 print("nope")
+
+        p[0] = ["double", "%s%s" % (p[1], val)]
 
     def p_funexp_func(p):
         '''funexp : NAME LPAR funexp RPAR
@@ -689,7 +778,6 @@ def myparse(filepath):
         print("Syntax error in input!")
         print(p)
         raise Exception("Syntax error")
-
     parser = yacc.yacc()
 
     with open(filepath, 'r') as myfile:
@@ -697,5 +785,5 @@ def myparse(filepath):
 
     print("\nparsing OK\n")
 
-    pmc.reinit()
+    pmc.reinitialization()
     return pmc

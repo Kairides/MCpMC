@@ -3,6 +3,7 @@ from random import random
 import random as rand
 from modules import mysub, reevaluation_const
 from copy import deepcopy
+import re
 # import time
 
 
@@ -62,10 +63,10 @@ def correction_parameters(pmc):
     for eqa in pmc.equation_system:
         total_probability = pmc.equation_system[eqa][0]
 
-        print(total_probability)
+        # print(total_probability)
 
         for par in pmc.equation_system[eqa][1]:
-            print(par, type(par), "c'est le param ?")
+            # print(par, type(par), "c'est le param ?")
             if par in pmc.value_param:
                 total_probability += (pmc.equation_system[eqa][1][par] * pmc.value_param[str(par)][1])
             else:
@@ -73,8 +74,8 @@ def correction_parameters(pmc):
                     if par in mod.current_value_state:
                         total_probability += pmc.equation_system[eqa][1][par] * mod.current_value_state[par]
 
-        print(eqa)
-        print(pmc.equation_system[eqa][0], type(len(pmc.equation_system[eqa][1])))
+        # print(eqa)
+        # print(pmc.equation_system[eqa][0], type(len(pmc.equation_system[eqa][1])))
         if len(pmc.equation_system[eqa][1]) == 0 and pmc.equation_system[eqa][0] < 1:
             max = 0
             equation = ""
@@ -82,7 +83,7 @@ def correction_parameters(pmc):
                 if len(str(pmc.equation_system[eqa][2][i])) >= max:
                     max = len(str(pmc.equation_system[eqa][2][i]))
                     equation = str(pmc.equation_system[eqa][2][i])
-            print(equation, "c'est elle")
+            # print(equation, "c'est elle")
             for i in range(len(pmc.equation_system[eqa][2])):
                 nb_in = 0
                 if str(pmc.equation_system[eqa][2][i]) in equation:
@@ -94,7 +95,7 @@ def correction_parameters(pmc):
                 else:
                     raise Exception("Some equations are not in the final equation")
 
-        print(total_probability)
+        # print(total_probability)
         # If the probability is greater than 1, the parameter used in the "equation" with the highest value
         # is recalculated based on the values of the other parameters (and their frequency in the "equation")
         # and on the numerical probability of the "equation", all that divided by the parameter's frequency
@@ -109,7 +110,7 @@ def correction_parameters(pmc):
                     proba_max = pmc.value_param[str(par)][1]
                     max_parameter = par
 
-            print(max_parameter, pmc.value_param[str(max_parameter)][1])
+            # print(max_parameter, pmc.value_param[str(max_parameter)][1])
 
             aux_proba = pmc.equation_system[eqa][0]
             for par in pmc.equation_system[eqa][1]:
@@ -123,6 +124,32 @@ def correction_parameters(pmc):
             parameter_type = pmc.value_param[str(max_parameter)][0]
 
             pmc.value_param[str(max_parameter)] = (parameter_type, new_value)
+
+
+def transition_recalculation(pmc):
+
+    for mod in pmc.get_modules():
+        for tr in mod.get_transition():
+            prob = tr[2][0]
+            if str(prob).isdigit():
+                print(prob)
+            else:
+                copy_point = str(prob).split('.')
+                copy_slash = str(prob).split('/')
+                if (copy_point[0].isdigit() and copy_point[1].isdigit()) or (copy_slash[0].isdigit() and copy_slash[1].isdigit()):
+                    print("poba reelle")
+                elif re.compile(r'([0-9]*[a-zA-Z]*)*').fullmatch(str(prob)):
+                    tr[2][0] = pmc.value_param[str(prob)][1]
+                else:
+                    # TODO: gerer les équations avec sympy ?
+                    proba = 0
+                    for param in pmc.param:
+                        if param in str(prob):
+                            proba += pmc.value_param[param]
+                    for var in mod.get_current_state.keys():
+                        print()
+
+            print(tr[2][0])
 
 
 def sim(length, pmc, value=None):
@@ -155,45 +182,50 @@ def sim(length, pmc, value=None):
             for trans_mod in pmc.get_possible_transitions():
                 if trans_mod:
                     proba_trans = 0
+                    trans_list = []
                     for trans in trans_mod:
                         proba_trans += trans[2][0]
+                        trans_list += [trans[2]]
+
+                    for tr in trans_list:
+                        print(tr)
 
                     if proba_trans > 1:
                         raise Exception("several actions possible")
                     else:
                         if value is None:
                             name, cond, outcome = trans_mod[0]
-                            print(outcome)
-                            norma = sum(not typennotexp(e[0]) for e in outcome)
+                            print("name:", name, "cond :", cond, "outcome :", outcome)
+                            norma = sum(not typennotexp(e[0]) for e in trans_list)
                             threshold = random()
                             y = 0
 
-                            while y < len(outcome) and threshold > 0:
-                                if typennotexp(outcome[y][0]):
-                                    threshold -= outcome[y][0]
+                            while y < len(trans_list) and threshold > 0:
+                                if typennotexp(trans_list[y][0]):
+                                    threshold -= trans_list[y][0]
                                 else:
                                     threshold -= 1/norma
                                 y += 1
                             y -= 1
 
-                            realprob = outcome[y][0]
+                            realprob = trans_list[y][0]
                             if typennotexp(realprob):
                                 prob *= mysub(realprob, pmc.get_valuation())/realprob
                             else:
                                 prob *= mysub(realprob, pmc.get_valuation())*norma
-                            pmc.maj(outcome[y][1])
+                            pmc.maj(trans_list[y][1])
                             cumu_reward += pmc.get_reward(name)
                         else:
                             name, _, outcome = trans_mod[0]
                             threshold = random()
                             y = 0
-                            while y < len(outcome) and threshold > 0:
-                                threshold -= mysub(mysub(outcome[y][0], value), pmc.get_valuation())
+                            while y < len(trans_list) and threshold > 0:
+                                threshold -= mysub(mysub(trans_list[y][0], value), pmc.get_valuation())
                                 y += 1
                             y -= 1
-                            realprob = outcome[y][0]
-                            prob *= mysub(realprob, pmc.get_valuation())/mysub(mysub(outcome[y][0], value), pmc.get_valuation())
-                            pmc.maj(outcome[y][1])
+                            realprob = trans_list[y][0]
+                            prob *= mysub(realprob, pmc.get_valuation())/mysub(mysub(trans_list[y][0], value), pmc.get_valuation())
+                            pmc.maj(trans_list[y][1])
                             cumu_reward += pmc.get_reward(name)
                 else:
                     numb_mod_deadlocked += 1
@@ -270,6 +302,8 @@ def simu(length, num_simu, pmc, value=None):
     reevaluation_const(pmc.value_param, pmc.get_valuation())
     for mod in pmc.modules:
         pmc.reevaluation(mod)
+
+    transition_recalculation(pmc)
 
     if pmc.get_pmc_type() == "ctmc":
         for _ in range(0, num_simu):

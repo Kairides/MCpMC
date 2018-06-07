@@ -1,5 +1,5 @@
 from collections import defaultdict
-from ply import lex,yacc
+from ply import lex, yacc
 from sympy.parsing.sympy_parser import parse_expr as rea
 from sympy import Function, Symbol
 from modules import PmcModules, Module

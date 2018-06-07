@@ -16,24 +16,26 @@ def parameterize(pmc):
 
     """initialize the parameters of the pMC"""
 
+    non_init = deepcopy(pmc.param)
+
     if pmc.get_pmc_type() == "ctmc":
-        non_init = deepcopy(pmc.param)
 
         while len(non_init) > 0:
             parameter = non_init.pop()
             if type(parameter) == "int":
-                pmc.value_param[str(parameter)] = (pmc.value_param[str(parameter)][0], rand.randint(0, 100))
+                alea = rand.randint(0, 100)
+                pmc.value_param[str(parameter)] = (pmc.value_param[str(parameter)][0], alea)
             else:
                 pmc.value_param[str(parameter)] = (pmc.value_param[str(parameter)][0], random())
     else:
-        non_init = deepcopy(pmc.param)
 
         while len(non_init) > 0:
             parameter = non_init.pop()
 
             # If the parameter is a an integer, its value will be between 0 and 9
             if type(parameter) == "int":
-                pmc.value_param[str(parameter)] = (pmc.value_param[str(parameter)][0], rand.randint(0, 10))
+                alea = rand.randint(0, 10)
+                pmc.value_param[str(parameter)] = (pmc.value_param[str(parameter)][0], alea)
 
             # If it's not an integer, it's either a float or a double
             else:
@@ -53,7 +55,8 @@ def parameterize(pmc):
                             proba_max = proba_temp
 
                 # The value of the parameter is then determined by the maximum probability
-                pmc.value_param[str(parameter)] = (pmc.value_param[str(parameter)][0], rand.uniform(0, proba_max))
+                alea = rand.uniform(0, proba_max)
+                pmc.value_param[str(parameter)] = (pmc.value_param[str(parameter)][0], alea)
         """for par in pmc.value_param:
             print(par, pmc.value_param[par])"""
 
@@ -66,13 +69,15 @@ def correction_parameters(pmc):
         # print(total_probability)
 
         for par in pmc.equation_system[eqa][1]:
-            # print(par, type(par), "c'est le param ?")
-            if par in pmc.value_param:
+            print(par, type(par), "c'est le param ?")
+            if str(par) in pmc.value_param:
                 total_probability += (pmc.equation_system[eqa][1][par] * pmc.value_param[str(par)][1])
             else:
                 for mod in pmc.modules:
                     if par in mod.current_value_state:
                         total_probability += pmc.equation_system[eqa][1][par] * mod.current_value_state[par]
+
+        print('proba', total_probability)
 
         # print(eqa)
         # print(pmc.equation_system[eqa][0], type(len(pmc.equation_system[eqa][1])))
@@ -116,7 +121,7 @@ def correction_parameters(pmc):
             for par in pmc.equation_system[eqa][1]:
                 aux_proba += pmc.equation_system[eqa][1][par] * pmc.value_param[str(par)][1]
 
-            if aux_proba > 1:
+            if aux_proba >= 1:
                 new_value = 0
             else:
                 new_value = rand.uniform(0, (1 - aux_proba) / pmc.equation_system[eqa][1][max_parameter])
@@ -125,6 +130,10 @@ def correction_parameters(pmc):
 
             pmc.value_param[str(max_parameter)] = (parameter_type, new_value)
 
+    print("nouvelle proba", total_probability)
+    """for i in pmc.value_param:
+        print(i, pmc.value_param[i][1])"""
+
 
 def transition_recalculation(pmc):
 
@@ -132,24 +141,24 @@ def transition_recalculation(pmc):
         for tr in mod.get_transition():
             prob = tr[2][0]
             if str(prob).isdigit():
-                print(prob)
+                print()
             else:
                 copy_point = str(prob).split('.')
                 copy_slash = str(prob).split('/')
                 if (copy_point[0].isdigit() and copy_point[1].isdigit()) or (copy_slash[0].isdigit() and copy_slash[1].isdigit()):
-                    print("poba reelle")
+                    print()
                 elif re.compile(r'([0-9]*[a-zA-Z]*)*').fullmatch(str(prob)):
                     tr[2][0] = pmc.value_param[str(prob)][1]
                 else:
-                    # TODO: gerer les équations avec sympy ?
-                    proba = 0
-                    for param in pmc.param:
-                        if param in str(prob):
-                            proba += pmc.value_param[param]
-                    for var in mod.get_current_state.keys():
-                        print()
 
-            print(tr[2][0])
+                    tr[2][0] = prob.evalf()
+
+                    dic = {}
+                    for param in pmc.param:
+                        if str(param) in str(prob):
+                            dic[param] = pmc.value_param[str(param)][1]
+
+                    tr[2][0] = prob.evalf(subs=dic)
 
 
 def sim(length, pmc, value=None):
@@ -157,26 +166,15 @@ def sim(length, pmc, value=None):
         return the accumulated reward"""
     pmc.reinitialization()
 
-    '''for i in pmc.modules:
-        print(i.current_value_state)
-
-    for i in pmc.value_param:
-        print(i, pmc.value_param[i])
-
-    for i in pmc.param:
-        print(i)'''
-
     end = False
     step = 0
     cumu_reward = 0
     prob = 1
     # Simulation for dtmc and probabilistic MC
     if pmc.get_pmc_type() == "dtmc" or pmc.get_pmc_type() == "probabilistic":
-        ''' for ind in pmc.get_modules():
-            for j in range(0, ind.num_state()):
-                print(pmc.get_state(ind, j), " = ", str(ind.current_value_state[pmc.get_state(ind, j)]))'''
 
         while step < length and not end:
+            print('step', step)
             step += 1
             numb_mod_deadlocked = 0
             for trans_mod in pmc.get_possible_transitions():
@@ -186,9 +184,6 @@ def sim(length, pmc, value=None):
                     for trans in trans_mod:
                         proba_trans += trans[2][0]
                         trans_list += [trans[2]]
-
-                    for tr in trans_list:
-                        print(tr)
 
                     if proba_trans > 1:
                         raise Exception("several actions possible")
@@ -200,6 +195,8 @@ def sim(length, pmc, value=None):
                             threshold = random()
                             y = 0
 
+                            print('trans_list', trans_list, len(trans_list))
+
                             while y < len(trans_list) and threshold > 0:
                                 if typennotexp(trans_list[y][0]):
                                     threshold -= trans_list[y][0]
@@ -209,8 +206,11 @@ def sim(length, pmc, value=None):
                             y -= 1
 
                             realprob = trans_list[y][0]
+                            print(trans_list[y])
                             if typennotexp(realprob):
+                                print("realprob", realprob)
                                 prob *= mysub(realprob, pmc.get_valuation())/realprob
+                                print("prob", prob)
                             else:
                                 prob *= mysub(realprob, pmc.get_valuation())*norma
                             pmc.maj(trans_list[y][1])
@@ -307,7 +307,7 @@ def simu(length, num_simu, pmc, value=None):
 
     if pmc.get_pmc_type() == "ctmc":
         for _ in range(0, num_simu):
-            # print("sim #"+str(i))
+            # print("sim #"+str())
             for i in pmc.value_param:
                 if pmc.value_param[i][1]:
                     print("Already initialized")

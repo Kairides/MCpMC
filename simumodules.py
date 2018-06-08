@@ -14,7 +14,7 @@ def typennotexp(expr):
 
 def parameterize(pmc):
 
-    """initialize the parameters of the pMC"""
+    """define a valuation for the parameters of the pMC"""
 
     non_init = deepcopy(pmc.param)
 
@@ -57,16 +57,13 @@ def parameterize(pmc):
                 # The value of the parameter is then determined by the maximum probability
                 alea = rand.uniform(0, proba_max)
                 pmc.value_param[str(parameter)] = (pmc.value_param[str(parameter)][0], alea)
-        """for par in pmc.value_param:
-            print(par, pmc.value_param[par])"""
 
 
 def correction_parameters(pmc):
+    """Determine a valid valuation"""
 
     for eqa in pmc.equation_system:
         total_probability = pmc.equation_system[eqa][0]
-
-        # print(total_probability)
 
         for par in pmc.equation_system[eqa][1]:
             print(par, type(par), "c'est le param ?")
@@ -79,8 +76,6 @@ def correction_parameters(pmc):
 
         print('proba', total_probability)
 
-        # print(eqa)
-        # print(pmc.equation_system[eqa][0], type(len(pmc.equation_system[eqa][1])))
         if len(pmc.equation_system[eqa][1]) == 0 and pmc.equation_system[eqa][0] < 1:
             max = 0
             equation = ""
@@ -100,7 +95,6 @@ def correction_parameters(pmc):
                 else:
                     raise Exception("Some equations are not in the final equation")
 
-        # print(total_probability)
         # If the probability is greater than 1, the parameter used in the "equation" with the highest value
         # is recalculated based on the values of the other parameters (and their frequency in the "equation")
         # and on the numerical probability of the "equation", all that divided by the parameter's frequency
@@ -130,12 +124,9 @@ def correction_parameters(pmc):
 
             pmc.value_param[str(max_parameter)] = (parameter_type, new_value)
 
-    print("nouvelle proba", total_probability)
-    """for i in pmc.value_param:
-        print(i, pmc.value_param[i][1])"""
-
 
 def transition_recalculation(pmc):
+    """calculate the probability of transition based on the valuation"""
 
     for mod in pmc.get_modules():
         for tr in mod.get_transition():

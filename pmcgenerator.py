@@ -6,6 +6,8 @@ import random
 # Function that chooses the next state for a transition
 def state_transition(reached_states, nb_state):
     new_state = random.randint(0, nb_state - 1)
+
+    # While the chosen state is already reached, a new one is selected
     while reached_states.count(new_state) >= 1:
         print("il est deja dedans", new_state)
         new_state = random.randint(0, nb_state - 1)
@@ -16,8 +18,12 @@ def state_transition(reached_states, nb_state):
 
 def random_rate(pmc_type, parameters=None, rate=None):
     if pmc_type == 'ctmc':
+
+        # parameters are only used if parameters and rate are initialized
         if parameters and rate:
             val = random.random()
+
+            # if the random value is inferior to the rate, a parameter is used
             if val <= rate:
                 index = random.randint(1, parameters)
                 return "p" + str(index)
